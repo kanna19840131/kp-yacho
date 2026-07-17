@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KP野帳 v3.8</title>
+<title>KP野帳 v3.9</title>
 <style>
 :root{
   --bg:#070707; --card:#14161a; --text:#f5f5f5; --muted:#a8a8a8;
@@ -67,7 +67,7 @@ textarea{min-height:160px;font-size:14px}
 </head>
 <body>
 
-<h1>KP野帳 v3.8</h1>
+<h1>KP野帳 v3.9</h1>
 
 <div class="card">
   <h2>現在KP</h2>
@@ -240,6 +240,7 @@ textarea{min-height:160px;font-size:14px}
 
 <div class="card">
   <h2>保存</h2>
+  <button class="btn-green" onclick="startNewDay()">新しい1日を開始</button>
   <button onclick="saveData()">保存</button>
   <button class="btn-gray" onclick="loadData()">読込</button>
   <button class="btn-red" onclick="resetData()">全削除</button>
@@ -247,7 +248,7 @@ textarea{min-height:160px;font-size:14px}
 </div>
 
 <div class="credit">
-  KP野帳 v3.8<br>
+  KP野帳 v3.9<br>
   Created by 株式会社RYUTEC 石川
 </div>
 
@@ -980,6 +981,33 @@ function loadData(show=true){
   render();
   if(show)alert("読み込みました");
 }
+function maxItemNo(){
+  let max=null;
+  items.forEach(it=>{
+    const n=parseFloat(it.no);
+    if(Number.isFinite(n))max=max===null?n:Math.max(max,n);
+  });
+  return max;
+}
+
+function startNewDay(){
+  if(!confirm("現在の施工一覧と当日集計をリセットします。連番Noは引き継がれます。実行しますか？"))return;
+  const maxNo=maxItemNo();
+  const currentNo=val("no");
+  items=[];
+  editIndex=null;
+  setEditUi(false);
+  document.getElementById("inTon").value="";
+  document.getElementById("leftTon").value="";
+  document.getElementById("regPhoto").checked=false;
+  clearEntry(false);
+  document.getElementById("no").value=maxNo===null ? currentNo : String(maxNo+1);
+  document.getElementById("branch").value="";
+  document.getElementById("summaryText").value="";
+  render();
+  saveData(false);
+}
+
 function resetData(){
   if(!confirm("全削除しますか？"))return;
   items=[];
