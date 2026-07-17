@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KP野帳 v3.7 監督員用一覧版</title>
+<title>KP野帳 v3.9</title>
 <style>
 :root{
   --bg:#070707; --card:#14161a; --text:#f5f5f5; --muted:#a8a8a8;
@@ -39,6 +39,8 @@ textarea{min-height:160px;font-size:14px}
 
 .photo-checks{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
 .photo-checks label{display:flex;align-items:center;gap:6px;margin-top:0;font-size:16px;color:var(--text)}
+.list-photo-checks{margin-top:6px;gap:10px}
+.list-photo-checks label{font-size:13px;color:var(--text)}
 .photo-badge{display:inline-block;border-radius:8px;padding:2px 6px;font-size:12px;margin-top:4px}
 .photo-ok{background:#11391f;color:#8cffaa;border:1px solid #256d39}
 .photo-warn{background:#3a3008;color:#ffe28a;border:1px solid #7e6a12}
@@ -65,7 +67,7 @@ textarea{min-height:160px;font-size:14px}
 </head>
 <body>
 
-<h1>KP野帳 v3.3</h1>
+<h1>KP野帳 v3.9</h1>
 
 <div class="card">
   <h2>現在KP</h2>
@@ -238,6 +240,7 @@ textarea{min-height:160px;font-size:14px}
 
 <div class="card">
   <h2>保存</h2>
+  <button class="btn-red" onclick="startNewDay()">新しい1日を開始</button>
   <button onclick="saveData()">保存</button>
   <button class="btn-gray" onclick="loadData()">読込</button>
   <button class="btn-red" onclick="resetData()">全削除</button>
@@ -245,7 +248,7 @@ textarea{min-height:160px;font-size:14px}
 </div>
 
 <div class="credit">
-  KP野帳 v3.6 現場判断版<br>
+  KP野帳 v3.9<br>
   Created by 株式会社RYUTEC 石川
 </div>
 
@@ -527,7 +530,7 @@ function photoStatus(it){
   const before=!!it.photoBefore, after=!!it.photoAfter;
   if(it.started && (parseFloat(it.area)||0)<=0)return {text:"施工前登録", cls:"status-started"};
   if(before && after)return {text:"前後OK", cls:"photo-ok"};
-  if(before && !after)return {text:"完了未確認", cls:"photo-warn"};
+  if(before && !after)return {text:"施工完了未", cls:"photo-warn"};
   if(!before && after)return {text:"施工前未確認", cls:"photo-warn"};
   return {text:"写真未確認", cls:"photo-ng"};
 }
@@ -708,6 +711,15 @@ function sortItems(mode){
   saveData(false);
 }
 
+function toggleItemPhoto(i, kind, checked){
+  const it=items[i];
+  if(!it)return;
+  if(kind==="before")it.photoBefore=!!checked;
+  if(kind==="after")it.photoAfter=!!checked;
+  render();
+  saveData(false);
+}
+
 function deleteItem(i){
   if(!confirm("削除しますか？"))return;
   items.splice(i,1);
@@ -838,7 +850,13 @@ function render(){
     if(editIndex===i)tr.className="edit-row";
     let kpText=it.kp?("KP"+formatKP(it.kp)+it.side):"-";
     const ps=photoStatus(it);
-    tr.innerHTML="<td>"+escapeHtml(displayNo(it.no,it.branch))+"</td><td>"+escapeHtml(kpText)+"</td><td>"+escapeHtml(it.session)+"</td><td>"+escapeHtml(it.formula)+(it.memo?"<br><span class='sub'>"+escapeHtml(it.memo)+"</span>":"")+"<br><span class='photo-badge "+ps.cls+"'>"+ps.text+"</span></td><td class='right'>"+fmt(it.area)+"</td><td class='right'>"+fmt(cum)+"</td><td><button class='btn-gray' style='font-size:12px;padding:6px' onclick='editItem("+i+")'>編集</button><br><button class='btn-red' style='font-size:12px;padding:6px' onclick='deleteItem("+i+")'>削除</button></td>";
+    const beforeChecked=it.photoBefore?" checked":"";
+    const afterChecked=it.photoAfter?" checked":"";
+    const photoControls="<div class='photo-checks list-photo-checks'>"+
+      "<label><input type='checkbox' style='width:auto' onchange='toggleItemPhoto("+i+",\"before\",this.checked)'"+beforeChecked+"> 施工前</label>"+
+      "<label><input type='checkbox' style='width:auto' onchange='toggleItemPhoto("+i+",\"after\",this.checked)'"+afterChecked+"> 施工完了</label>"+
+      "</div>";
+    tr.innerHTML="<td>"+escapeHtml(displayNo(it.no,it.branch))+"</td><td>"+escapeHtml(kpText)+"</td><td>"+escapeHtml(it.session)+"</td><td>"+escapeHtml(it.formula)+(it.memo?"<br><span class='sub'>"+escapeHtml(it.memo)+"</span>":"")+"<br><span class='photo-badge "+ps.cls+"'>"+ps.text+"</span>"+photoControls+"</td><td class='right'>"+fmt(it.area)+"</td><td class='right'>"+fmt(cum)+"</td><td><button class='btn-gray' style='font-size:12px;padding:6px' onclick='editItem("+i+")'>編集</button><br><button class='btn-red' style='font-size:12px;padding:6px' onclick='deleteItem("+i+")'>削除</button></td>";
     tb.appendChild(tr);
   });
   let total=am+pm;
@@ -963,6 +981,39 @@ function loadData(show=true){
   render();
   if(show)alert("読み込みました");
 }
+function maxNoFromItems(){
+  let max=null;
+  items.forEach(it=>{
+    const n=parseFloat(it.no);
+    if(Number.isFinite(n))max=max===null?n:Math.max(max,n);
+  });
+  return max;
+}
+
+function startNewDay(){
+  if(!confirm("現在の施工一覧と当日集計をリセットします。連番Noは引き継がれます。実行しますか？"))return;
+  const maxNo=maxNoFromItems();
+  const currentNo=val("no");
+
+  items=[];
+  editIndex=null;
+  setEditUi(false);
+  document.getElementById("inTon").value="";
+  document.getElementById("leftTon").value="";
+  document.getElementById("regPhoto").checked=false;
+  clearEntry(false);
+  document.getElementById("branch").value="";
+  if(maxNo!==null){
+    document.getElementById("no").value=String(Math.floor(maxNo)+1);
+  }else{
+    document.getElementById("no").value=currentNo;
+  }
+  const summary=document.getElementById("summaryText");
+  if(summary)summary.value="";
+  render();
+  saveData(false);
+}
+
 function resetData(){
   if(!confirm("全削除しますか？"))return;
   items=[];
