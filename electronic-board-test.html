@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>電子黒板テスト</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, -apple-system, "Noto Sans JP", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #eef1ef; color: #17201b; }
+    header { padding: 16px max(16px, env(safe-area-inset-left)); background: #173f31; color: #fff; }
+    header h1 { margin: 0; font-size: 1.35rem; }
+    header p { margin: 4px 0 0; font-size: .84rem; opacity: .85; }
+    main { width: min(100%, 980px); margin: auto; padding: 14px 12px calc(28px + env(safe-area-inset-bottom)); }
+    .panel { margin-bottom: 14px; padding: 14px; border-radius: 12px; background: #fff; box-shadow: 0 2px 9px #0d2a1c18; }
+    h2 { margin: 0 0 12px; font-size: 1rem; }
+    .file-label, button, .save-link { display: flex; align-items: center; justify-content: center; min-height: 46px; border: 0; border-radius: 9px; font: inherit; font-weight: 700; cursor: pointer; }
+    .file-label { background: #e3eee8; color: #173f31; }
+    input[type="file"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label { display: grid; gap: 5px; font-size: .78rem; font-weight: 700; }
+    label.wide { grid-column: 1 / -1; }
+    input, select, textarea { width: 100%; min-height: 43px; padding: 9px 10px; border: 1px solid #aebcb5; border-radius: 7px; background: #fff; color: #17201b; font: 16px/1.3 inherit; }
+    textarea { min-height: 68px; resize: vertical; }
+    .scale-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; margin-top: 12px; }
+    input[type="range"] { padding: 0; accent-color: #1c6449; }
+    output { min-width: 3.5em; text-align: right; font-weight: 700; }
+    .stage-wrap { overflow: hidden; border-radius: 10px; background: #26302b; touch-action: none; }
+    canvas { display: block; width: 100%; height: auto; max-height: 68vh; object-fit: contain; touch-action: none; }
+    .hint, #status { margin: 10px 0 0; color: #54645c; font-size: .78rem; }
+    .actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+    button { width: 100%; background: #1c6449; color: #fff; }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    .save-link { background: #173f31; color: #fff; text-decoration: none; }
+    .hidden { display: none; }
+    @media (min-width: 720px) {
+      main { display: grid; grid-template-columns: 330px 1fr; align-items: start; gap: 14px; }
+      .controls { grid-row: span 2; }
+      .panel { margin-bottom: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>電子黒板テスト</h1>
+    <p>写真に工事黒板を重ねてJPEG保存</p>
+  </header>
+  <main>
+    <section class="panel controls" aria-labelledby="settings-title">
+      <h2 id="settings-title">1. 写真と黒板内容</h2>
+      <label class="file-label" for="photo">写真を読み込む</label>
+      <input id="photo" type="file" accept="image/*">
+      <div class="fields" style="margin-top:12px">
+        <label>No<input id="boardNo" autocomplete="off" placeholder="例：12"></label>
+        <label>KP<input id="kp" autocomplete="off" placeholder="例：10.250"></label>
+        <label>L/R<select id="side"><option value="L">L</option><option value="R">R</option><option value="L/R">L/R</option></select></label>
+        <label>状況<select id="phase"><option>施工前</option><option>施工完了</option></select></label>
+        <label class="wide">日付<input id="date" type="date"></label>
+        <label class="wide">備考<textarea id="note" maxlength="80" placeholder="工事内容など"></textarea></label>
+      </div>
+      <div class="scale-row">
+        <label for="scale">黒板サイズ<input id="scale" type="range" min="15" max="70" value="38"></label>
+        <output id="scaleValue" for="scale">38%</output>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="preview-title">
+      <h2 id="preview-title">2. 位置を調整</h2>
+      <div class="stage-wrap"><canvas id="canvas" width="1200" height="800" aria-label="写真と電子黒板のプレビュー"></canvas></div>
+      <p class="hint">黒板をドラッグして移動。2本指のピンチ、またはスライダーで拡大・縮小できます。</p>
+      <p id="status" role="status">写真を読み込んでください。</p>
+      <div class="actions">
+        <button id="save" type="button" disabled>JPEGを作成</button>
+        <a id="download" class="save-link hidden" download="electronic-board.jpg">JPEGを保存</a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+      const $ = (id) => document.getElementById(id);
+      const canvas = $('canvas');
+      const ctx = canvas.getContext('2d');
+      const photo = new Image();
+      const state = { loaded: false, x: 0, y: 0, scale: .38, pointers: new Map(), dragOffsetX: 0, dragOffsetY: 0, pinchDistance: 0, pinchScale: .38 };
+      const fields = ['boardNo', 'kp', 'side', 'phase', 'date', 'note'];
+
+      function boardSize() {
+        const width = canvas.width * state.scale;
+        return { width, height: width * .64 };
+      }
+
+      function roundedRect(x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, radius);
+      }
+
+      function fitText(text, maxWidth, initialSize, weight = 700) {
+        let size = initialSize;
+        do { ctx.font = `${weight} ${size}px system-ui, sans-serif`; size -= 1; } while (size > 10 && ctx.measureText(text).width > maxWidth);
+      }
+
+      function drawBoard() {
+        const { width: w, height: h } = boardSize();
+        const x = state.x, y = state.y, pad = w * .035, line = Math.max(2, w * .006);
+        ctx.save();
+        ctx.fillStyle = '#0d3b2b';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = line;
+        roundedRect(x, y, w, h, w * .018);
+        ctx.fill(); ctx.stroke();
+
+        const rows = [0, .2, .4, .61, 1].map((v) => y + pad + (h - pad * 2) * v);
+        ctx.beginPath();
+        for (let i = 1; i < rows.length - 1; i++) { ctx.moveTo(x + pad, rows[i]); ctx.lineTo(x + w - pad, rows[i]); }
+        const split = x + w * .28;
+        ctx.moveTo(split, rows[0]); ctx.lineTo(split, rows[3]);
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const labels = ['No', 'KP', 'L/R'];
+        const values = [$('boardNo').value || '—', $('kp').value || '—', $('side').value];
+        for (let i = 0; i < 3; i++) {
+          fitText(labels[i], w * .21, w * .062); ctx.fillText(labels[i], x + w * .155, (rows[i] + rows[i + 1]) / 2);
+          fitText(values[i], w * .62, w * .075); ctx.fillText(values[i], split + (x + w - pad - split) / 2, (rows[i] + rows[i + 1]) / 2);
+        }
+        const phaseDate = `${$('phase').value}　${formatDate($('date').value)}`;
+        fitText(phaseDate, w - pad * 3, w * .065); ctx.fillText(phaseDate, x + w / 2, (rows[3] + rows[2]) / 2);
+        const note = $('note').value.trim() || '備考';
+        fitText(note, w - pad * 3, w * .055, 600); ctx.fillText(note, x + w / 2, (rows[3] + rows[4]) / 2);
+        ctx.restore();
+      }
+
+      function formatDate(value) {
+        if (!value) return '日付未入力';
+        const [year, month, day] = value.split('-');
+        return `${year}/${month}/${day}`;
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (state.loaded) ctx.drawImage(photo, 0, 0, canvas.width, canvas.height);
+        else {
+          ctx.fillStyle = '#26302b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#dce5e0'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 42px system-ui, sans-serif';
+          ctx.fillText('写真プレビュー', canvas.width / 2, canvas.height / 2);
+        }
+        drawBoard();
+      }
+
+      function clampBoard() {
+        const { width, height } = boardSize();
+        state.x = Math.min(canvas.width - width, Math.max(0, state.x));
+        state.y = Math.min(canvas.height - height, Math.max(0, state.y));
+      }
+
+      function canvasPoint(event) {
+        const rect = canvas.getBoundingClientRect();
+        return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
+      }
+
+      $('photo').addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) { $('status').textContent = '画像ファイルを選択してください。'; return; }
+        const url = URL.createObjectURL(file);
+        photo.onload = () => {
+          const maxSide = 2400;
+          const ratio = Math.min(1, maxSide / Math.max(photo.naturalWidth, photo.naturalHeight));
+          canvas.width = Math.round(photo.naturalWidth * ratio); canvas.height = Math.round(photo.naturalHeight * ratio);
+          state.loaded = true; state.scale = Number($('scale').value) / 100;
+          const size = boardSize(); state.x = canvas.width - size.width - canvas.width * .03; state.y = canvas.height - size.height - canvas.height * .03;
+          $('save').disabled = false; $('download').classList.add('hidden'); $('status').textContent = `${file.name} を読み込みました。`;
+          render(); URL.revokeObjectURL(url);
+        };
+        photo.onerror = () => { $('status').textContent = '写真を読み込めませんでした。'; URL.revokeObjectURL(url); };
+        photo.src = url;
+      });
+
+      fields.forEach((id) => $(id).addEventListener('input', () => { $('download').classList.add('hidden'); render(); }));
+      $('scale').addEventListener('input', () => {
+        const old = boardSize(), centerX = state.x + old.width / 2, centerY = state.y + old.height / 2;
+        state.scale = Number($('scale').value) / 100; const next = boardSize(); state.x = centerX - next.width / 2; state.y = centerY - next.height / 2;
+        clampBoard(); $('scaleValue').value = `${$('scale').value}%`; $('download').classList.add('hidden'); render();
+      });
+
+      canvas.addEventListener('pointerdown', (event) => {
+        const point = canvasPoint(event), size = boardSize();
+        if (state.pointers.size === 0 && (point.x < state.x || point.x > state.x + size.width || point.y < state.y || point.y > state.y + size.height)) return;
+        canvas.setPointerCapture(event.pointerId); state.pointers.set(event.pointerId, point);
+        state.dragOffsetX = point.x - state.x; state.dragOffsetY = point.y - state.y;
+        if (state.pointers.size === 2) { const pts = [...state.pointers.values()]; state.pinchDistance = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y); state.pinchScale = state.scale; }
+      });
+      canvas.addEventListener('pointermove', (event) => {
+        if (!state.pointers.has(event.pointerId)) return;
+        state.pointers.set(event.pointerId, canvasPoint(event));
+        if (state.pointers.size === 1) { const p = state.pointers.values().next().value; state.x = p.x - state.dragOffsetX; state.y = p.y - state.dragOffsetY; }
+        else { const pts = [...state.pointers.values()]; const distance = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y); state.scale = Math.min(.7, Math.max(.15, state.pinchScale * distance / state.pinchDistance)); $('scale').value = Math.round(state.scale * 100); $('scaleValue').value = `${$('scale').value}%`; }
+        clampBoard(); $('download').classList.add('hidden'); render();
+      });
+      const pointerEnd = (event) => state.pointers.delete(event.pointerId);
+      canvas.addEventListener('pointerup', pointerEnd); canvas.addEventListener('pointercancel', pointerEnd);
+
+      $('save').addEventListener('click', () => {
+        render();
+        canvas.toBlob((blob) => {
+          if (!blob) { $('status').textContent = 'JPEGの作成に失敗しました。'; return; }
+          const link = $('download'); if (link.dataset.url) URL.revokeObjectURL(link.dataset.url);
+          link.dataset.url = URL.createObjectURL(blob); link.href = link.dataset.url; link.classList.remove('hidden'); link.click();
+          $('status').textContent = 'JPEGを作成しました。保存されない場合は「JPEGを保存」を押してください。';
+        }, 'image/jpeg', .92);
+      });
+
+      $('date').value = new Date().toISOString().slice(0, 10);
+      render();
+    })();
+  </script>
+</body>
+</html>
