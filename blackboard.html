@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KP野帳 電子黒板 β</title>
+<style>
+:root{--bg:#070707;--card:#15171b;--text:#f5f5f5;--muted:#aaa;--blue:#79aaff;--green:#25c05a;--line:#343942}
+*{box-sizing:border-box}
+body{margin:0;padding:14px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+h1{font-size:30px;margin:8px 0 16px}
+h2{font-size:20px;color:var(--blue);border-bottom:2px solid var(--blue);padding-bottom:7px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+label{display:block;color:var(--muted);font-size:14px;margin-top:10px}
+input,select,textarea{width:100%;padding:12px;margin-top:5px;border-radius:10px;border:1px solid #555;background:#292c31;color:var(--text);font-size:17px}
+textarea{min-height:78px;resize:vertical}
+button,a.btn{display:inline-block;border:0;border-radius:10px;padding:12px 14px;font-size:16px;font-weight:800;color:white;background:#0d6efd;margin-top:8px;text-decoration:none}
+.btn-green{background:var(--green);color:#031407}.btn-gray{background:#555b63}.row{display:flex;gap:8px}.row>div{flex:1}.sub{font-size:13px;color:var(--muted);line-height:1.5}
+.preview-wrap{background:#222;border-radius:12px;padding:10px;overflow:auto}
+canvas{display:block;width:100%;height:auto;background:#0b5b2b;border:2px solid #ddd;border-radius:6px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar>*{flex:1;min-width:140px;text-align:center}
+@media(max-width:560px){.row{display:block}.toolbar>*{min-width:100%}}
+</style>
+</head>
+<body>
+<h1>電子黒板 β</h1>
+
+<div class="card">
+  <h2>KP野帳から読込</h2>
+  <button onclick="loadYacho()">最新データを読込</button>
+  <label>施工記録</label>
+  <select id="recordSelect" onchange="applyRecord()"><option value="">記録を選択</option></select>
+  <div class="sub" id="loadInfo">端末内のKP野帳データを使用します。</div>
+</div>
+
+<div class="card">
+  <h2>黒板内容</h2>
+  <label>工事名</label><input id="project" placeholder="例 道路維持補修業務">
+  <div class="row">
+    <div><label>路線</label><input id="route" placeholder="例 R230"></div>
+    <div><label>日付</label><input id="date" type="date"></div>
+  </div>
+  <div class="row">
+    <div><label>No.</label><input id="no" placeholder="例 12-1"></div>
+    <div><label>KP・左右</label><input id="kp" placeholder="例 KP15.84 R"></div>
+  </div>
+  <div class="row">
+    <div><label>天候</label><input id="weather" placeholder="例 晴れ"></div>
+    <div><label>工種</label><input id="work" value="舗装補修"></div>
+  </div>
+  <label>施工内容</label><textarea id="detail" placeholder="例 表層工　再生細粒度As 13F"></textarea>
+  <label>寸法・面積</label><input id="measure" placeholder="例 0.90 × 12.00 = 10.80㎡">
+  <label>備考</label><input id="memo" placeholder="任意">
+  <div class="toolbar">
+    <button onclick="drawBoard()">黒板を更新</button>
+    <button class="btn-green" onclick="downloadPng()">PNG保存</button>
+    <a class="btn btn-gray" href="./">KP野帳へ戻る</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>撮影・保存用</h2>
+  <div class="preview-wrap"><canvas id="board" width="1200" height="900"></canvas></div>
+  <div class="sub">黒板画像を保存して、現場写真への合成や確認用に使用できます。発注者指定の電子小黒板仕様には別途適合確認が必要です。</div>
+</div>
+
+<script>
+const ids=["project","route","date","no","kp","weather","work","detail","measure","memo"];
+function v(id){return document.getElementById(id).value.trim()}
+function escText(s){return String(s??"")}
+function formatKP(x){const n=parseFloat(x);return Number.isFinite(n)?n.toFixed(2):String(x||"")}
+function displayNo(it){return it.branch?`${it.no}-${it.branch}`:String(it.no||"")}
+function today(){return new Date().toISOString().slice(0,10)}
+
+function loadYacho(){
+  const raw=localStorage.getItem("kp_yacho_v12");
+  const sel=document.getElementById("recordSelect");
+  sel.innerHTML='<option value="">記録を選択</option>';
+  if(!raw){document.getElementById("loadInfo").innerText="保存済みのKP野帳データがありません。";return}
+  try{
+    const d=JSON.parse(raw);
+    window.yachoData=d;
+    document.getElementById("route").value=d.route||"";
+    document.getElementById("date").value=d.date||today();
+    (d.items||[]).forEach((it,i)=>{
+      const op=document.createElement("option");
+      op.value=String(i);
+      op.textContent=`No.${displayNo(it)} / KP${formatKP(it.kp)} ${it.side||""} / ${Number(it.area||0).toFixed(2)}㎡`;
+      sel.appendChild(op);
+    });
+    document.getElementById("loadInfo").innerText=`${(d.items||[]).length}件を読み込みました。`;
+    drawBoard();
+  }catch(e){document.getElementById("loadInfo").innerText="データ読込に失敗しました。"}
+}
+
+function applyRecord(){
+  const i=parseInt(v("recordSelect"),10);
+  const d=window.yachoData;
+  if(!d||!Number.isInteger(i)||!d.items?.[i])return;
+  const it=d.items[i];
+  document.getElementById("route").value=it.route||d.route||"";
+  document.getElementById("date").value=it.date||d.date||today();
+  document.getElementById("no").value=displayNo(it);
+  document.getElementById("kp").value=it.kp?`KP${formatKP(it.kp)} ${it.side||""}`:"";
+  document.getElementById("measure").value=`${it.formula||""}${it.area!==undefined?` = ${Number(it.area||0).toFixed(2)}㎡`:""}`;
+  document.getElementById("memo").value=it.memo||"";
+  drawBoard();
+}
+
+function fitText(ctx,text,maxWidth,startSize,minSize=24,weight="700"){
+  let size=startSize;
+  while(size>minSize){ctx.font=`${weight} ${size}px sans-serif`;if(ctx.measureText(text).width<=maxWidth)break;size-=2}
+  return size;
+}
+function wrapLines(ctx,text,maxWidth,maxLines){
+  const chars=[...text];let lines=[],line="";
+  for(const ch of chars){const test=line+ch;if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=ch;if(lines.length===maxLines-1)break}else line=test}
+  if(line&&lines.length<maxLines)lines.push(line);
+  return lines;
+}
+function drawCell(ctx,label,value,x,y,w,h,labelW=210){
+  ctx.strokeStyle="#fff";ctx.lineWidth=4;ctx.strokeRect(x,y,w,h);ctx.beginPath();ctx.moveTo(x+labelW,y);ctx.lineTo(x+labelW,y+h);ctx.stroke();
+  ctx.fillStyle="#fff";ctx.font="700 34px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(label,x+labelW/2,y+h/2);
+  const text=escText(value||"—");const size=fitText(ctx,text,w-labelW-36,42,24,"700");ctx.font=`700 ${size}px sans-serif`;ctx.textAlign="left";ctx.fillText(text,x+labelW+18,y+h/2);
+}
+function drawBoard(){
+  const c=document.getElementById("board"),ctx=c.getContext("2d");
+  ctx.fillStyle="#0c5d2d";ctx.fillRect(0,0,c.width,c.height);
+  ctx.strokeStyle="#fff";ctx.lineWidth=8;ctx.strokeRect(18,18,c.width-36,c.height-36);
+  ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.font="900 54px sans-serif";ctx.fillText("工 事 黒 板",600,72);
+  const x=46,w=1108,h=92;let y=122;
+  drawCell(ctx,"工事名",v("project"),x,y,w,h);y+=h;
+  drawCell(ctx,"路線・場所",`${v("route")}  ${v("kp")}`.trim(),x,y,w,h);y+=h;
+  drawCell(ctx,"日付・天候",`${v("date")}  ${v("weather")}`.trim(),x,y,w,h);y+=h;
+  drawCell(ctx,"工種・No.",`${v("work")}  No.${v("no")}`.trim(),x,y,w,h);y+=h;
+  drawCell(ctx,"施工内容",v("detail"),x,y,w,128);y+=128;
+  drawCell(ctx,"寸法・面積",v("measure"),x,y,w,112);y+=112;
+  drawCell(ctx,"備考",v("memo"),x,y,w,112);y+=112;
+  ctx.font="500 24px sans-serif";ctx.textAlign="right";ctx.fillText("KP野帳 電子黒板 β",1134,858);
+  saveDraft();
+}
+function downloadPng(){drawBoard();const c=document.getElementById("board");const a=document.createElement("a");const name=(v("date")||today())+"_No"+(v("no")||"未設定")+"_黒板.png";a.download=name.replace(/[\\/:*?\"<>|]/g,"_");a.href=c.toDataURL("image/png");a.click()}
+function saveDraft(){const d={};ids.forEach(id=>d[id]=v(id));localStorage.setItem("kp_blackboard_draft",JSON.stringify(d))}
+function loadDraft(){try{const d=JSON.parse(localStorage.getItem("kp_blackboard_draft")||"{}");ids.forEach(id=>{if(d[id]!==undefined)document.getElementById(id).value=d[id]});}catch(e){}if(!v("date"))document.getElementById("date").value=today()}
+ids.forEach(id=>document.getElementById(id).addEventListener("input",drawBoard));
+loadDraft();loadYacho();drawBoard();
+</script>
+</body>
+</html>
