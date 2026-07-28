@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KP野帳 電子黒板 β</title>
 <style>
-:root{--bg:#070707;--card:#15171b;--text:#f5f5f5;--muted:#aaa;--blue:#79aaff;--green:#25c05a;--line:#343942}
+:root{
+  --bg:#070707;--card:#15171b;--text:#f5f5f5;--muted:#aaa;
+  --blue:#79aaff;--green:#25c05a;--line:#343942;--gray:#555b63;
+}
 *{box-sizing:border-box}
 body{margin:0;padding:14px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 h1{font-size:30px;margin:8px 0 16px}
@@ -14,11 +17,13 @@ h2{font-size:20px;color:var(--blue);border-bottom:2px solid var(--blue);padding-
 label{display:block;color:var(--muted);font-size:14px;margin-top:10px}
 input,select,textarea{width:100%;padding:12px;margin-top:5px;border-radius:10px;border:1px solid #555;background:#292c31;color:var(--text);font-size:17px}
 textarea{min-height:78px;resize:vertical}
-button,a.btn{display:inline-block;border:0;border-radius:10px;padding:12px 14px;font-size:16px;font-weight:800;color:white;background:#0d6efd;margin-top:8px;text-decoration:none}
-.btn-green{background:var(--green);color:#031407}.btn-gray{background:#555b63}.row{display:flex;gap:8px}.row>div{flex:1}.sub{font-size:13px;color:var(--muted);line-height:1.5}
+button,a.btn{display:inline-block;border:0;border-radius:10px;padding:12px 14px;font-size:16px;font-weight:800;color:#fff;background:#0d6efd;margin-top:8px;text-decoration:none}
+.btn-green{background:var(--green);color:#031407}.btn-gray{background:var(--gray)}
+.row{display:flex;gap:8px}.row>div{flex:1}.sub{font-size:13px;color:var(--muted);line-height:1.5}
 .preview-wrap{background:#222;border-radius:12px;padding:10px;overflow:auto}
-canvas{display:block;width:100%;height:auto;background:#0b5b2b;border:2px solid #ddd;border-radius:6px}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar>*{flex:1;min-width:140px;text-align:center}
+canvas{display:block;width:100%;height:auto;background:#e9e9e9;border-radius:8px}
+.toolbar,.quick-buttons{display:flex;gap:8px;flex-wrap:wrap}.toolbar>*{flex:1;min-width:140px;text-align:center}
+.quick-buttons button{flex:1;min-width:100px;font-size:14px;padding:10px}
 @media(max-width:560px){.row{display:block}.toolbar>*{min-width:100%}}
 </style>
 </head>
@@ -35,22 +40,37 @@ canvas{display:block;width:100%;height:auto;background:#0b5b2b;border:2px solid 
 
 <div class="card">
   <h2>黒板内容</h2>
-  <label>工事名</label><input id="project" placeholder="例 道路維持補修業務">
+  <label>工事名</label>
+  <input id="project" value="一般国道230号 札幌市 川沿地区舗装維持外一連工事">
+
   <div class="row">
-    <div><label>路線</label><input id="route" placeholder="例 R230"></div>
-    <div><label>日付</label><input id="date" type="date"></div>
+    <div><label>工種</label><input id="work" value="パッチング"></div>
+    <div><label>位置</label><input id="position" placeholder="例 KP5.54 R"></div>
   </div>
+
+  <label>設計寸法</label>
+  <input id="designMeasure" placeholder="例 W0.90 × L12.00 × t0.05">
+
+  <label>実測寸法</label>
+  <input id="actualMeasure" placeholder="例 0.90 × 12.00 = 10.80㎡">
+
+  <label>右側の表示</label>
+  <textarea id="rightText" placeholder="例 施工&#10;完了">施工
+完了</textarea>
+  <div class="quick-buttons">
+    <button class="btn-gray" onclick="setRightText('施工前')">施工前</button>
+    <button class="btn-gray" onclick="setRightText('施工\n完了')">施工完了</button>
+    <button class="btn-gray" onclick="setRightText('')">空欄</button>
+  </div>
+
   <div class="row">
-    <div><label>No.</label><input id="no" placeholder="例 12-1"></div>
-    <div><label>KP・左右</label><input id="kp" placeholder="例 KP15.84 R"></div>
+    <div><label>左下の小番号</label><input id="smallNo" inputmode="numeric" placeholder="例 35"></div>
+    <div><label>右下の会社名</label><input id="company" value="道央環境(株)"></div>
   </div>
-  <div class="row">
-    <div><label>天候</label><input id="weather" placeholder="例 晴れ"></div>
-    <div><label>工種</label><input id="work" value="舗装補修"></div>
-  </div>
-  <label>施工内容</label><textarea id="detail" placeholder="例 表層工　再生細粒度As 13F"></textarea>
-  <label>寸法・面積</label><input id="measure" placeholder="例 0.90 × 12.00 = 10.80㎡">
-  <label>備考</label><input id="memo" placeholder="任意">
+
+  <label>保存用日付（黒板には表示しません）</label>
+  <input id="date" type="date">
+
   <div class="toolbar">
     <button onclick="drawBoard()">黒板を更新</button>
     <button class="btn-green" onclick="downloadPng()">PNG保存</button>
@@ -60,14 +80,15 @@ canvas{display:block;width:100%;height:auto;background:#0b5b2b;border:2px solid 
 
 <div class="card">
   <h2>撮影・保存用</h2>
-  <div class="preview-wrap"><canvas id="board" width="1200" height="900"></canvas></div>
-  <div class="sub">黒板画像を保存して、現場写真への合成や確認用に使用できます。発注者指定の電子小黒板仕様には別途適合確認が必要です。</div>
+  <div class="preview-wrap"><canvas id="board" width="1400" height="1000"></canvas></div>
+  <div class="sub">実物黒板と同じ構成で、上段に工事名、左に工種・位置・設計寸法・実測寸法、右に略図または施工状況を表示します。</div>
 </div>
 
 <script>
-const ids=["project","route","date","no","kp","weather","work","detail","measure","memo"];
+const ids=["project","work","position","designMeasure","actualMeasure","rightText","smallNo","company","date"];
+const FONT='"Yu Gothic","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif';
+
 function v(id){return document.getElementById(id).value.trim()}
-function escText(s){return String(s??"")}
 function formatKP(x){const n=parseFloat(x);return Number.isFinite(n)?n.toFixed(2):String(x||"")}
 function displayNo(it){return it.branch?`${it.no}-${it.branch}`:String(it.no||"")}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -80,7 +101,6 @@ function loadYacho(){
   try{
     const d=JSON.parse(raw);
     window.yachoData=d;
-    document.getElementById("route").value=d.route||"";
     document.getElementById("date").value=d.date||today();
     (d.items||[]).forEach((it,i)=>{
       const op=document.createElement("option");
@@ -90,60 +110,222 @@ function loadYacho(){
     });
     document.getElementById("loadInfo").innerText=`${(d.items||[]).length}件を読み込みました。`;
     drawBoard();
-  }catch(e){document.getElementById("loadInfo").innerText="データ読込に失敗しました。"}
+  }catch(e){
+    document.getElementById("loadInfo").innerText="データ読込に失敗しました。";
+  }
 }
 
 function applyRecord(){
-  const i=parseInt(v("recordSelect"),10);
+  const i=parseInt(document.getElementById("recordSelect").value,10);
   const d=window.yachoData;
   if(!d||!Number.isInteger(i)||!d.items?.[i])return;
   const it=d.items[i];
-  document.getElementById("route").value=it.route||d.route||"";
   document.getElementById("date").value=it.date||d.date||today();
-  document.getElementById("no").value=displayNo(it);
-  document.getElementById("kp").value=it.kp?`KP${formatKP(it.kp)} ${it.side||""}`:"";
-  document.getElementById("measure").value=`${it.formula||""}${it.area!==undefined?` = ${Number(it.area||0).toFixed(2)}㎡`:""}`;
-  document.getElementById("memo").value=it.memo||"";
+  document.getElementById("position").value=it.kp?`KP${formatKP(it.kp)} ${it.side||""}`:"";
+  document.getElementById("actualMeasure").value=`${it.formula||""}${it.area!==undefined?` = ${Number(it.area||0).toFixed(2)}㎡`:""}`;
+  document.getElementById("smallNo").value=displayNo(it);
   drawBoard();
 }
 
-function fitText(ctx,text,maxWidth,startSize,minSize=24,weight="700"){
+function setRightText(text){
+  document.getElementById("rightText").value=text;
+  drawBoard();
+}
+
+function roundedRect(ctx,x,y,w,h,r){
+  const rr=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y,x+w,y+h,rr);
+  ctx.arcTo(x+w,y+h,x,y+h,rr);
+  ctx.arcTo(x,y+h,x,y,rr);
+  ctx.arcTo(x,y,x+w,y,rr);
+  ctx.closePath();
+}
+
+function fitText(ctx,text,maxWidth,startSize,minSize=22,weight=700){
   let size=startSize;
-  while(size>minSize){ctx.font=`${weight} ${size}px sans-serif`;if(ctx.measureText(text).width<=maxWidth)break;size-=2}
+  while(size>minSize){
+    ctx.font=`${weight} ${size}px ${FONT}`;
+    if(ctx.measureText(text).width<=maxWidth)break;
+    size-=2;
+  }
   return size;
 }
-function wrapLines(ctx,text,maxWidth,maxLines){
-  const chars=[...text];let lines=[],line="";
-  for(const ch of chars){const test=line+ch;if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=ch;if(lines.length===maxLines-1)break}else line=test}
-  if(line&&lines.length<maxLines)lines.push(line);
-  return lines;
+
+function drawCenteredText(ctx,text,x,y,w,h,startSize,minSize=22,weight=700){
+  const value=String(text||"");
+  const size=fitText(ctx,value,w-28,startSize,minSize,weight);
+  ctx.font=`${weight} ${size}px ${FONT}`;
+  ctx.fillStyle="#fff";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.fillText(value,x+w/2,y+h/2);
 }
-function drawCell(ctx,label,value,x,y,w,h,labelW=210){
-  ctx.strokeStyle="#fff";ctx.lineWidth=4;ctx.strokeRect(x,y,w,h);ctx.beginPath();ctx.moveTo(x+labelW,y);ctx.lineTo(x+labelW,y+h);ctx.stroke();
-  ctx.fillStyle="#fff";ctx.font="700 34px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(label,x+labelW/2,y+h/2);
-  const text=escText(value||"—");const size=fitText(ctx,text,w-labelW-36,42,24,"700");ctx.font=`700 ${size}px sans-serif`;ctx.textAlign="left";ctx.fillText(text,x+labelW+18,y+h/2);
+
+function drawLeftText(ctx,text,x,y,w,h,startSize,minSize=22,weight=700,pad=22){
+  const value=String(text||"");
+  const size=fitText(ctx,value,w-pad*2,startSize,minSize,weight);
+  ctx.font=`${weight} ${size}px ${FONT}`;
+  ctx.fillStyle="#fff";
+  ctx.textAlign="left";
+  ctx.textBaseline="middle";
+  ctx.fillText(value,x+pad,y+h/2);
 }
+
+function drawRightAreaText(ctx,text,x,y,w,h){
+  const raw=String(text||"").trim();
+  if(!raw)return;
+  let lines=raw.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  if(lines.length===1 && lines[0].length>=4 && !lines[0].includes(" ")){
+    const s=lines[0];
+    lines=[s.slice(0,Math.ceil(s.length/2)),s.slice(Math.ceil(s.length/2))];
+  }
+  lines=lines.slice(0,4);
+  let size=112;
+  const maxWidth=w-80;
+  const maxHeight=h-150;
+  while(size>42){
+    ctx.font=`800 ${size}px ${FONT}`;
+    const widest=Math.max(...lines.map(line=>ctx.measureText(line).width));
+    const total=lines.length*size*1.25;
+    if(widest<=maxWidth&&total<=maxHeight)break;
+    size-=4;
+  }
+  ctx.fillStyle="#fff";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.font=`800 ${size}px ${FONT}`;
+  const lineH=size*1.25;
+  const totalH=(lines.length-1)*lineH;
+  const startY=y+h/2-totalH/2+24;
+  lines.forEach((line,i)=>ctx.fillText(line,x+w/2,startY+i*lineH));
+}
+
 function drawBoard(){
-  const c=document.getElementById("board"),ctx=c.getContext("2d");
-  ctx.fillStyle="#0c5d2d";ctx.fillRect(0,0,c.width,c.height);
-  ctx.strokeStyle="#fff";ctx.lineWidth=8;ctx.strokeRect(18,18,c.width-36,c.height-36);
-  ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.font="900 54px sans-serif";ctx.fillText("工 事 黒 板",600,72);
-  const x=46,w=1108,h=92;let y=122;
-  drawCell(ctx,"工事名",v("project"),x,y,w,h);y+=h;
-  drawCell(ctx,"路線・場所",`${v("route")}  ${v("kp")}`.trim(),x,y,w,h);y+=h;
-  drawCell(ctx,"日付・天候",`${v("date")}  ${v("weather")}`.trim(),x,y,w,h);y+=h;
-  drawCell(ctx,"工種・No.",`${v("work")}  No.${v("no")}`.trim(),x,y,w,h);y+=h;
-  drawCell(ctx,"施工内容",v("detail"),x,y,w,128);y+=128;
-  drawCell(ctx,"寸法・面積",v("measure"),x,y,w,112);y+=112;
-  drawCell(ctx,"備考",v("memo"),x,y,w,112);y+=112;
-  ctx.font="500 24px sans-serif";ctx.textAlign="right";ctx.fillText("KP野帳 電子黒板 β",1134,858);
+  const c=document.getElementById("board");
+  const ctx=c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const metal=ctx.createLinearGradient(0,0,0,c.height);
+  metal.addColorStop(0,"#fafafa");
+  metal.addColorStop(0.45,"#d7d7d7");
+  metal.addColorStop(1,"#f5f5f5");
+  ctx.fillStyle=metal;
+  roundedRect(ctx,18,18,1364,964,34);
+  ctx.fill();
+  ctx.strokeStyle="#b7b7b7";
+  ctx.lineWidth=4;
+  ctx.stroke();
+
+  const boardX=46,boardY=48,boardW=1308,boardH=904;
+  const green=ctx.createRadialGradient(710,430,80,700,500,820);
+  green.addColorStop(0,"#08734c");
+  green.addColorStop(0.58,"#05613f");
+  green.addColorStop(1,"#034a31");
+  ctx.fillStyle=green;
+  roundedRect(ctx,boardX,boardY,boardW,boardH,18);
+  ctx.fill();
+
+  ctx.strokeStyle="#fff";
+  ctx.lineWidth=5;
+  roundedRect(ctx,boardX+12,boardY+12,boardW-24,boardH-24,12);
+  ctx.stroke();
+
+  const innerX=boardX+18;
+  const innerY=boardY+18;
+  const innerW=boardW-36;
+  const innerH=boardH-36;
+  const headerH=124;
+  const contentY=innerY+headerH;
+  const contentH=innerH-headerH;
+  const leftW=Math.round(innerW*0.535);
+  const rightX=innerX+leftW;
+  const rightW=innerW-leftW;
+  const labelW=Math.round(leftW*0.39);
+  const rowH=120;
+
+  ctx.strokeStyle="#fff";
+  ctx.lineWidth=4;
+
+  // 工事名帯
+  ctx.beginPath();
+  ctx.moveTo(innerX,contentY);
+  ctx.lineTo(innerX+innerW,contentY);
+  ctx.stroke();
+  drawLeftText(ctx,"工 事 名",innerX,innerY,245,headerH,57,36,700,22);
+  drawLeftText(ctx,v("project"),innerX+245,innerY,innerW-245,headerH,54,27,700,18);
+
+  // 左右分割
+  ctx.beginPath();
+  ctx.moveTo(rightX,contentY);
+  ctx.lineTo(rightX,innerY+innerH);
+  ctx.stroke();
+
+  const labels=["工　種","位　置","設計寸法","実測寸法"];
+  const values=[v("work"),v("position"),v("designMeasure"),v("actualMeasure")];
+  for(let i=0;i<4;i++){
+    const y=contentY+i*rowH;
+    ctx.beginPath();
+    ctx.moveTo(innerX,y+rowH);
+    ctx.lineTo(rightX,y+rowH);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(innerX+labelW,y);
+    ctx.lineTo(innerX+labelW,y+rowH);
+    ctx.stroke();
+    drawCenteredText(ctx,labels[i],innerX,y,labelW,rowH,51,30,700);
+    drawLeftText(ctx,values[i],innerX+labelW,y,leftW-labelW,rowH,53,26,700,18);
+  }
+
+  // 右側の略図欄
+  drawCenteredText(ctx,"略　図",rightX,contentY,rightW,94,48,30,700);
+  drawRightAreaText(ctx,v("rightText"),rightX,contentY+72,rightW,contentH-110);
+
+  // 左下の小番号、右下の会社名
+  ctx.fillStyle="#fff";
+  ctx.textBaseline="alphabetic";
+  ctx.textAlign="left";
+  ctx.font=`600 25px ${FONT}`;
+  ctx.fillText(v("smallNo"),innerX+14,innerY+innerH-14);
+
+  ctx.textAlign="right";
+  const company=v("company");
+  const companySize=fitText(ctx,company,rightW-40,46,28,700);
+  ctx.font=`700 ${companySize}px ${FONT}`;
+  ctx.fillText(company,innerX+innerW-18,innerY+innerH-18);
+
   saveDraft();
 }
-function downloadPng(){drawBoard();const c=document.getElementById("board");const a=document.createElement("a");const name=(v("date")||today())+"_No"+(v("no")||"未設定")+"_黒板.png";a.download=name.replace(/[\\/:*?\"<>|]/g,"_");a.href=c.toDataURL("image/png");a.click()}
-function saveDraft(){const d={};ids.forEach(id=>d[id]=v(id));localStorage.setItem("kp_blackboard_draft",JSON.stringify(d))}
-function loadDraft(){try{const d=JSON.parse(localStorage.getItem("kp_blackboard_draft")||"{}");ids.forEach(id=>{if(d[id]!==undefined)document.getElementById(id).value=d[id]});}catch(e){}if(!v("date"))document.getElementById("date").value=today()}
+
+function downloadPng(){
+  drawBoard();
+  const c=document.getElementById("board");
+  const a=document.createElement("a");
+  const name=(v("date")||today())+"_No"+(v("smallNo")||"未設定")+"_黒板.png";
+  a.download=name.replace(/[\\/:*?"<>|]/g,"_");
+  a.href=c.toDataURL("image/png");
+  a.click();
+}
+
+function saveDraft(){
+  const d={};
+  ids.forEach(id=>d[id]=document.getElementById(id).value);
+  localStorage.setItem("kp_blackboard_draft_v2",JSON.stringify(d));
+}
+
+function loadDraft(){
+  try{
+    const d=JSON.parse(localStorage.getItem("kp_blackboard_draft_v2")||"{}");
+    ids.forEach(id=>{if(d[id]!==undefined)document.getElementById(id).value=d[id]});
+  }catch(e){}
+  if(!v("date"))document.getElementById("date").value=today();
+}
+
 ids.forEach(id=>document.getElementById(id).addEventListener("input",drawBoard));
-loadDraft();loadYacho();drawBoard();
+loadDraft();
+loadYacho();
+drawBoard();
 </script>
 </body>
 </html>
