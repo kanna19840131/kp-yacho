@@ -135,7 +135,7 @@ function drawText(ctx,text,x,y,w,h,start=48,align='left',blank='—'){
   ctx.font=`700 ${s}px ${FONT}`;ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign=align;
   ctx.fillText(value,align==='center'?x+w/2:x+16,y+h/2);
 }
-function drawActual(ctx,x,y,w,h){
+function drawDimensions(ctx,x,y,w,h){
   const wText=`W＝${v('widthM')||'—'}m`,lText=`L＝${v('lengthM')||'—'}m`;
   const s=Math.min(fit(ctx,wText,w-30,46,22,700),fit(ctx,lText,w-30,46,22,700));
   ctx.font=`700 ${s}px ${FONT}`;ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';
@@ -156,13 +156,13 @@ function drawBoard(){
   ctx.beginPath();ctx.moveTo(rx,cy);ctx.lineTo(rx,iy+ih);ctx.stroke();
 
   const labels=['工　種','位　置','設計寸法','実測寸法'];
-  const values=[v('workType'),v('position'),v('temperature')?`温度 ${v('temperature')}℃`:'温度 —',''];
+  const values=[v('workType'),v('position'),'',v('temperature')?`温度 ${v('temperature')}℃`:'温度 —'];
   for(let i=0;i<4;i++){
     const y=cy+i*rowH;
     ctx.beginPath();ctx.moveTo(ix,y+rowH);ctx.lineTo(rx,y+rowH);ctx.stroke();
     ctx.beginPath();ctx.moveTo(ix+labelW,y);ctx.lineTo(ix+labelW,y+rowH);ctx.stroke();
     drawText(ctx,labels[i],ix,y,labelW,rowH,48,'center','');
-    if(i===3)drawActual(ctx,ix+labelW,y,leftW-labelW,rowH);
+    if(i===2)drawDimensions(ctx,ix+labelW,y,leftW-labelW,rowH);
     else drawText(ctx,values[i],ix+labelW,y,leftW-labelW,rowH,48,'left','—');
   }
 
