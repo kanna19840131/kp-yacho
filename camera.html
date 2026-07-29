@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KP野帳 カメラβ</title>
+<style>
+:root{--bg:#060606;--card:#15171b;--text:#f5f5f5;--muted:#aaa;--blue:#79aaff;--green:#25c05a;--red:#ff5a5f;--gray:#555b63;--line:#343942}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:20;background:rgba(6,6,6,.94);backdrop-filter:blur(10px);padding:10px 12px;border-bottom:1px solid var(--line)}
+header h1{font-size:22px;margin:0}.sub{font-size:12px;color:var(--muted);line-height:1.45}
+main{padding:12px;max-width:900px;margin:auto}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:12px}
+label{display:block;color:var(--muted);font-size:13px;margin-top:9px}select,input{width:100%;padding:11px;margin-top:5px;border-radius:10px;border:1px solid #555;background:#292c31;color:var(--text);font-size:16px}
+button,a.btn{border:0;border-radius:10px;padding:11px 13px;font-size:15px;font-weight:800;color:white;background:#0d6efd;text-decoration:none;text-align:center}.btn-green{background:var(--green);color:#031407}.btn-red{background:var(--red)}.btn-gray{background:var(--gray)}
+.row{display:flex;gap:8px}.row>*{flex:1}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar>*{flex:1;min-width:130px}
+.camera-shell{position:relative;width:100%;aspect-ratio:3/4;background:#111;overflow:hidden;border-radius:14px;border:1px solid var(--line);touch-action:none}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+#overlay{position:absolute;left:3%;bottom:3%;width:46%;max-width:520px;min-width:150px;cursor:move;touch-action:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.75))}
+#overlay canvas{display:block;width:100%;height:auto}
+.capture-bar{display:flex;gap:10px;margin-top:10px}.capture-bar button{flex:1}.shutter{font-size:19px;padding:15px}.status{padding:9px;border-radius:9px;background:#0d0f12;border:1px solid var(--line);margin-top:8px;font-size:13px;color:var(--muted)}
+#resultWrap{display:none}#result{width:100%;border-radius:12px;border:1px solid var(--line);background:#111}
+.range-row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:end}
+.warn{background:#3a3008;border:1px solid #7e6a12;color:#ffe28a;padding:9px;border-radius:9px;font-size:13px}
+@media(max-width:560px){main{padding:8px}.row{display:block}.toolbar>*{min-width:100%}.camera-shell{aspect-ratio:3/4}.range-row{grid-template-columns:1fr 92px}}
+</style>
+</head>
+<body>
+<header><h1>KP野帳 カメラβ</h1><div class="sub">施工データを黒板へ反映し、カメラ左下へ重ねて撮影保存</div></header>
+<main>
+<div class="card">
+  <div class="toolbar">
+    <button onclick="startCamera()">背面カメラ開始</button>
+    <button class="btn-gray" onclick="switchCamera()">前後切替</button>
+    <button class="btn-gray" onclick="stopCamera()">停止</button>
+  </div>
+  <div id="cameraStatus" class="status">カメラ未開始</div>
+</div>
+
+<div class="card">
+  <label>施工記録</label>
+  <select id="recordSelect" onchange="applyRecord()"><option value="">記録を選択</option></select>
+  <div class="row">
+    <div><label>状態</label><select id="state" onchange="drawBoard()"><option>施工前</option><option>施工完了</option><option>空欄</option></select></div>
+    <div><label>左下番号</label><input id="smallNo" placeholder="例 35" oninput="drawBoard()"></div>
+  </div>
+  <div class="range-row">
+    <div><label>黒板サイズ</label><input id="sizeRange" type="range" min="24" max="72" value="46" oninput="resizeOverlay()"></div>
+    <button class="btn-gray" onclick="resetOverlay()">位置戻す</button>
+  </div>
+  <div class="sub">黒板は指で移動できます。サイズはスライダーで調整。</div>
+</div>
+
+<div class="card">
+  <div id="cameraShell" class="camera-shell">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="overlay"><canvas id="board" width="1000" height="720"></canvas></div>
+  </div>
+  <div class="capture-bar">
+    <button class="btn-green shutter" onclick="capturePhoto()">撮影して保存</button>
+  </div>
+  <div class="warn" style="margin-top:10px">このβ版は正式な改ざん検知付き電子小黒板ではありません。試験運用・社内確認用として使用してください。</div>
+</div>
+
+<div class="card" id="resultWrap">
+  <h2 style="margin:0 0 10px;font-size:18px;color:var(--blue)">撮影結果</h2>
+  <img id="result" alt="撮影結果">
+  <div class="toolbar" style="margin-top:9px">
+    <button class="btn-green" onclick="downloadResult()">画像を保存</button>
+    <a class="btn btn-gray" href="./blackboard.html">黒板編集へ</a>
+    <a class="btn btn-gray" href="./">KP野帳へ</a>
+  </div>
+</div>
+</main>
+
+<script>
+let stream=null, facingMode="environment", resultUrl="", yachoData=null;
+const $=id=>document.getElementById(id);
+const v=id=>$(id).value.trim();
+function formatKP(x){const n=parseFloat(x);return Number.isFinite(n)?n.toFixed(2):String(x||"")}
+function displayNo(it){return it?.branch?`${it.no}-${it.branch}`:String(it?.no||"")}
+function fitText(ctx,text,maxWidth,start,min=20,weight=700){let s=start;while(s>min){ctx.font=`${weight} ${s}px sans-serif`;if(ctx.measureText(text).width<=maxWidth)break;s-=2}return s}
+function boardDataFromDraft(){try{return JSON.parse(localStorage.getItem("kp_blackboard_draft")||"{}")}catch(e){return {}}}
+
+function loadRecords(){
+  const raw=localStorage.getItem("kp_yacho_v12"), sel=$("recordSelect");
+  sel.innerHTML='<option value="">記録を選択</option>';
+  if(!raw){drawBoard();return}
+  try{
+    yachoData=JSON.parse(raw);
+    (yachoData.items||[]).forEach((it,i)=>{const o=document.createElement("option");o.value=i;o.textContent=`No.${displayNo(it)} / KP${formatKP(it.kp)} ${it.side||""} / ${Number(it.area||0).toFixed(2)}㎡`;sel.appendChild(o)});
+  }catch(e){yachoData=null}
+  drawBoard();
+}
+function applyRecord(){
+  const i=parseInt(v("recordSelect"),10);
+  if(!yachoData||!Number.isInteger(i)||!yachoData.items?.[i])return;
+  const it=yachoData.items[i];$("smallNo").value=displayNo(it);drawBoard();
+}
+function getCurrentData(){
+  const draft=boardDataFromDraft();
+  const i=parseInt(v("recordSelect"),10), it=(yachoData&&Number.isInteger(i))?yachoData.items?.[i]:null;
+  return {
+    project:draft.project||"工事名",
+    work:draft.work||"舗装補修",
+    position:it?(it.kp?`KP${formatKP(it.kp)} ${it.side||""}`:"—"):(draft.kp||"—"),
+    design:draft.design||"—",
+    actual:it?`${it.formula||""}${it.area!==undefined?` = ${Number(it.area||0).toFixed(2)}㎡`:""}`:(draft.measure||"—"),
+    state:v("state"),
+    smallNo:v("smallNo")||displayNo(it)||"",
+    company:draft.company||"株式会社RYUTEC"
+  }
+}
+function drawBoard(){
+  const c=$("board"),ctx=c.getContext("2d"),d=getCurrentData();
+  const W=c.width,H=c.height, pad=18, topH=105, leftW=560, labelW=185, rowH=115;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle="#0b5b2c";ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle="#fff";ctx.lineWidth=7;ctx.strokeRect(pad,pad,W-pad*2,H-pad*2);
+  ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(pad,pad+topH);ctx.lineTo(W-pad,pad+topH);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(leftW,pad+topH);ctx.lineTo(leftW,H-pad);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(labelW,pad+topH);ctx.lineTo(labelW,H-pad);ctx.stroke();
+  for(let r=1;r<4;r++){const y=pad+topH+rowH*r;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(leftW,y);ctx.stroke()}
+  ctx.fillStyle="#fff";ctx.textBaseline="middle";ctx.textAlign="center";ctx.font="700 34px sans-serif";ctx.fillText("工事名",102,pad+topH/2);
+  const ps=fitText(ctx,d.project,W-245,42,24,700);ctx.font=`700 ${ps}px sans-serif`;ctx.textAlign="left";ctx.fillText(d.project,205,pad+topH/2);
+  const labels=["工種","位置","設計寸法","実測寸法"], vals=[d.work,d.position,d.design,d.actual];
+  labels.forEach((lab,i)=>{const cy=pad+topH+rowH*i+rowH/2;ctx.font="700 30px sans-serif";ctx.textAlign="center";ctx.fillText(lab,(pad+labelW)/2,cy);const s=fitText(ctx,vals[i]||"—",leftW-labelW-24,34,20,700);ctx.font=`700 ${s}px sans-serif`;ctx.textAlign="left";ctx.fillText(vals[i]||"—",labelW+12,cy)});
+  ctx.font="700 30px sans-serif";ctx.textAlign="center";ctx.fillText("略図",(leftW+W-pad)/2,pad+topH+28);
+  if(d.state!=="空欄"){
+    const chars=[...d.state];ctx.font="800 78px sans-serif";ctx.textAlign="center";const cx=(leftW+W-pad)/2, startY=pad+topH+150;
+    chars.forEach((ch,i)=>ctx.fillText(ch,cx,startY+i*84));
+  }
+  ctx.font="700 28px sans-serif";ctx.textAlign="left";ctx.fillText(d.smallNo,pad+10,H-pad-18);
+  ctx.font="500 24px sans-serif";ctx.textAlign="right";ctx.fillText(d.company,W-pad-12,H-pad-18);
+}
+
+async function startCamera(){
+  stopCamera();
+  if(!navigator.mediaDevices?.getUserMedia){$("cameraStatus").innerText="このブラウザはカメラAPIに対応していません。";return}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080}},audio:false});
+    $("video").srcObject=stream;await $("video").play();$("cameraStatus").innerText=(facingMode==="environment"?"背面":"前面")+"カメラ起動中";
+  }catch(e){$("cameraStatus").innerText="カメラ起動失敗："+e.message}
+}
+function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$("video").srcObject=null;$("cameraStatus").innerText="カメラ停止中"}
+async function switchCamera(){facingMode=facingMode==="environment"?"user":"environment";await startCamera()}
+function resizeOverlay(){$("overlay").style.width=v("sizeRange")+"%"}
+function resetOverlay(){$("overlay").style.left="3%";$("overlay").style.top="";$("overlay").style.bottom="3%";$("sizeRange").value="46";resizeOverlay()}
+
+(function enableDrag(){
+  const el=$("overlay"), shell=$("cameraShell");let dragging=false, sx=0,sy=0,sl=0,st=0;
+  el.addEventListener("pointerdown",e=>{dragging=true;el.setPointerCapture(e.pointerId);const er=el.getBoundingClientRect(),sr=shell.getBoundingClientRect();sx=e.clientX;sy=e.clientY;sl=er.left-sr.left;st=er.top-sr.top;el.style.bottom="auto";e.preventDefault()});
+  el.addEventListener("pointermove",e=>{if(!dragging)return;const sr=shell.getBoundingClientRect(),er=el.getBoundingClientRect();let l=sl+e.clientX-sx,t=st+e.clientY-sy;l=Math.max(0,Math.min(l,sr.width-er.width));t=Math.max(0,Math.min(t,sr.height-er.height));el.style.left=l+"px";el.style.top=t+"px";e.preventDefault()});
+  el.addEventListener("pointerup",()=>dragging=false);el.addEventListener("pointercancel",()=>dragging=false);
+})();
+
+function capturePhoto(){
+  const video=$("video");if(!stream||!video.videoWidth){alert("先にカメラを開始してください。");return}
+  drawBoard();
+  const out=document.createElement("canvas"),ctx=out.getContext("2d");out.width=video.videoWidth;out.height=video.videoHeight;ctx.drawImage(video,0,0,out.width,out.height);
+  const shell=$("cameraShell").getBoundingClientRect(),ov=$("overlay").getBoundingClientRect();
+  const scaleX=out.width/shell.width,scaleY=out.height/shell.height;
+  ctx.drawImage($("board"),(ov.left-shell.left)*scaleX,(ov.top-shell.top)*scaleY,ov.width*scaleX,ov.height*scaleY);
+  resultUrl=out.toDataURL("image/jpeg",0.94);$("result").src=resultUrl;$("resultWrap").style.display="block";$("resultWrap").scrollIntoView({behavior:"smooth"});
+}
+function downloadResult(){if(!resultUrl)return;const a=document.createElement("a"),now=new Date();a.href=resultUrl;a.download=`${now.toISOString().replace(/[:.]/g,"-")}_KP野帳カメラ.jpg`;a.click()}
+window.addEventListener("beforeunload",stopCamera);
+loadRecords();resizeOverlay();drawBoard();
+</script>
+</body>
+</html>
