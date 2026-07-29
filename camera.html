@@ -5,197 +5,42 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>KP野帳 カメラβ</title>
 <style>
-:root{--bg:#060606;--card:#15171b;--text:#f5f5f5;--muted:#aaa;--green:#25c05a;--gray:#555b63;--line:#343942}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-header{position:sticky;top:0;z-index:20;background:#060606ee;padding:10px 12px;border-bottom:1px solid var(--line)}
-header h1{margin:0;font-size:22px}
-main{padding:10px;max-width:900px;margin:auto}
-.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:10px}
-label{display:block;color:var(--muted);font-size:13px;margin-top:9px}
-input,select{width:100%;padding:11px;margin-top:5px;border-radius:10px;border:1px solid #555;background:#292c31;color:#fff;font-size:16px}
-button,a.btn{border:0;border-radius:10px;padding:11px 13px;font-size:15px;font-weight:800;color:#fff;background:#0d6efd;text-decoration:none;text-align:center;touch-action:manipulation}
-.btn-green{background:var(--green);color:#031407}.btn-gray{background:var(--gray)}
-.toolbar,.row,.state-tabs{display:flex;gap:8px;flex-wrap:wrap}.toolbar>*{flex:1;min-width:130px}.row>*{flex:1;min-width:160px}
-.state-tabs button{flex:1;background:#333}.state-tabs button.active{background:#0d6efd}
-.range-row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:end}
-.camera-card{position:relative}.camera-shell{position:relative;width:100%;aspect-ratio:3/4;background:#111;overflow:hidden;border-radius:14px;border:1px solid var(--line);touch-action:none}
-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
-#overlay{position:absolute;left:3%;bottom:3%;width:46%;max-width:560px;min-width:150px;cursor:move;touch-action:none;filter:drop-shadow(0 2px 5px #000c)}
-#overlay canvas{display:block;width:100%;height:auto}.capture-bar{display:flex;margin-top:10px}.capture-bar button{flex:1}
-.warn{margin-top:10px;background:#3a3008;border:1px solid #7e6a12;color:#ffe28a;padding:9px;border-radius:9px;font-size:13px}
-.credit{text-align:center;color:#b9b9b9;font-size:13px;line-height:1.7;padding:8px 12px 18px}.credit strong{color:#fff}
-.fullscreen-controls,.rotate-guide,.capture-flash{display:none}
-body.shooting-mode{overflow:hidden;background:#000}
-body.shooting-mode header,body.shooting-mode main>.card:not(.camera-card),body.shooting-mode .camera-card>.warn,body.shooting-mode .capture-bar,body.shooting-mode .credit{display:none!important}
-body.shooting-mode main{padding:0;max-width:none;width:100vw;height:100dvh}
-body.shooting-mode .camera-card{margin:0;padding:0;border:0;border-radius:0;width:100vw;height:100dvh}
-body.shooting-mode .camera-shell{position:fixed;inset:0;width:100vw;height:100dvh;aspect-ratio:auto;border:0;border-radius:0;z-index:100}
-body.shooting-mode .fullscreen-controls{display:flex;position:fixed;z-index:1000;top:0;right:0;bottom:0;width:118px;gap:18px;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(90deg,transparent,#000d)}
-body.shooting-mode .fullscreen-controls button{width:94px;min-height:54px;background:#222d}
-body.shooting-mode .fullscreen-controls .full-shutter{width:82px;height:82px;min-width:82px;border-radius:50%;padding:0;border:7px solid #fff;background:#fff;box-shadow:0 0 0 4px #0008}
-body.shooting-mode .capture-flash{display:block;position:fixed;inset:0;z-index:2000;background:#fff;opacity:0;pointer-events:none;transition:opacity .12s}
-body.shooting-mode .capture-flash.on{opacity:.88}
-@media(orientation:portrait){body.shooting-mode .rotate-guide{display:flex;position:fixed;inset:0;z-index:1500;background:#000d;align-items:center;justify-content:center;text-align:center;font-size:24px;font-weight:900;padding:24px}body.shooting-mode .fullscreen-controls{opacity:.25}}
-@media(max-width:560px){.row{display:block}.toolbar>*{min-width:100%}.range-row{grid-template-columns:1fr 92px}}
+:root{--bg:#060606;--card:#15171b;--text:#f5f5f5;--muted:#aaa;--green:#25c05a;--gray:#555b63;--line:#343942}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}header{position:sticky;top:0;z-index:20;background:#060606ee;padding:10px 12px;border-bottom:1px solid var(--line)}header h1{margin:0;font-size:22px}main{padding:10px;max-width:900px;margin:auto}.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:10px}label{display:block;color:var(--muted);font-size:13px;margin-top:9px}input,select{width:100%;padding:11px;margin-top:5px;border-radius:10px;border:1px solid #555;background:#292c31;color:#fff;font-size:16px}button{border:0;border-radius:10px;padding:11px 13px;font-size:15px;font-weight:800;color:#fff;background:#0d6efd;text-align:center;touch-action:manipulation}.btn-green{background:var(--green);color:#031407}.btn-gray{background:var(--gray)}.toolbar,.row,.state-tabs{display:flex;gap:8px;flex-wrap:wrap}.toolbar>*{flex:1;min-width:130px}.row>*{flex:1;min-width:160px}.state-tabs button{flex:1;background:#333}.state-tabs button.active{background:#0d6efd}.range-row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:end}.camera-card{position:relative}.camera-shell{position:relative;width:100%;aspect-ratio:3/4;background:#111;overflow:hidden;border-radius:14px;border:1px solid var(--line);touch-action:none}video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}#overlay{position:absolute;left:3%;bottom:3%;width:46%;max-width:560px;min-width:150px;cursor:move;touch-action:none;filter:drop-shadow(0 2px 5px #000c)}#overlay canvas{display:block;width:100%;height:auto}.capture-bar{display:flex;margin-top:10px}.capture-bar button{flex:1}.warn{margin-top:10px;background:#3a3008;border:1px solid #7e6a12;color:#ffe28a;padding:9px;border-radius:9px;font-size:13px}.credit{text-align:center;color:#b9b9b9;font-size:13px;line-height:1.7;padding:8px 12px 18px}.credit strong{color:#fff}.fullscreen-controls,.rotate-guide,.capture-flash{display:none}body.shooting-mode{overflow:hidden;background:#000}body.shooting-mode header,body.shooting-mode main>.card:not(.camera-card),body.shooting-mode .camera-card>.warn,body.shooting-mode .capture-bar,body.shooting-mode .credit{display:none!important}body.shooting-mode main{padding:0;max-width:none;width:100vw;height:100dvh}body.shooting-mode .camera-card{margin:0;padding:0;border:0;border-radius:0;width:100vw;height:100dvh}body.shooting-mode .camera-shell{position:fixed;inset:0;width:100vw;height:100dvh;aspect-ratio:auto;border:0;border-radius:0;z-index:100}body.shooting-mode .fullscreen-controls{display:flex;position:fixed;z-index:1000;top:0;right:0;bottom:0;width:118px;gap:18px;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(90deg,transparent,#000d)}body.shooting-mode .fullscreen-controls button{width:94px;min-height:54px;background:#222d}body.shooting-mode .fullscreen-controls .full-shutter{width:82px;height:82px;min-width:82px;border-radius:50%;padding:0;border:7px solid #fff;background:#fff;box-shadow:0 0 0 4px #0008}body.shooting-mode .capture-flash{display:block;position:fixed;inset:0;z-index:2000;background:#fff;opacity:0;pointer-events:none;transition:opacity .12s}body.shooting-mode .capture-flash.on{opacity:.88}@media(orientation:portrait){body.shooting-mode .rotate-guide{display:flex;position:fixed;inset:0;z-index:1500;background:#000d;align-items:center;justify-content:center;text-align:center;font-size:24px;font-weight:900;padding:24px}body.shooting-mode .fullscreen-controls{opacity:.25}}@media(max-width:560px){.row{display:block}.toolbar>*{min-width:100%}.range-row{grid-template-columns:1fr 92px}}
 </style>
 </head>
 <body>
 <header><h1>KP野帳 カメラβ</h1></header>
 <main>
+<div class="card"><div class="toolbar"><button onclick="startCamera()">背面カメラ開始</button><button class="btn-green" onclick="enterShootingMode()">全画面撮影</button><button class="btn-gray" onclick="switchCamera()">前後切替</button><button class="btn-gray" onclick="stopCamera()">停止</button></div><div id="cameraStatus" style="margin-top:8px;color:#aaa">カメラ未開始</div></div>
 <div class="card">
-  <div class="toolbar">
-    <button onclick="startCamera()">背面カメラ開始</button>
-    <button class="btn-green" onclick="enterShootingMode()">全画面撮影</button>
-    <button class="btn-gray" onclick="switchCamera()">前後切替</button>
-    <button class="btn-gray" onclick="stopCamera()">停止</button>
-  </div>
-  <div id="cameraStatus" style="margin-top:8px;color:#aaa">カメラ未開始</div>
+<label>工事名</label><input id="project" value="一般国道230号 札幌市 川沿地区舗装維持外一連工事">
+<div class="row"><div><label>工種</label><select id="workType"><option value="パッチング">パッチング</option><option value="投げ込み">投げ込み</option></select></div><div><label>位置</label><input id="position" placeholder="例 KP5.54 R"></div></div>
+<div class="row"><div><label>温度（℃）</label><input id="temperature" inputmode="decimal" placeholder="例 150"></div><div><label>左下番号</label><input id="smallNo" inputmode="numeric" placeholder="例 35"></div></div>
+<div class="row"><div><label>W（m）</label><input id="widthM" inputmode="decimal" placeholder="例 1.20"></div><div><label>L（m）</label><input id="lengthM" inputmode="decimal" placeholder="例 9.20"></div></div>
+<label>右側表示</label><div class="state-tabs"><button id="beforeBtn" class="active" onclick="setState('施工前')">施工前</button><button id="doneBtn" onclick="setState('施工完了')">施工完了</button></div>
+<label>会社名</label><input id="company" value="道央環境(株)">
+<div class="range-row"><div><label>黒板サイズ</label><input id="sizeRange" type="range" min="24" max="72" value="46" oninput="resizeOverlay()"></div><button class="btn-gray" onclick="resetOverlay()">位置戻す</button></div>
 </div>
-
-<div class="card">
-  <label>工事名</label>
-  <input id="project" value="一般国道230号 札幌市 川沿地区舗装維持外一連工事">
-
-  <div class="row">
-    <div>
-      <label>工種</label>
-      <select id="workType">
-        <option value="パッチング">パッチング</option>
-        <option value="投げ込み">投げ込み</option>
-      </select>
-    </div>
-    <div>
-      <label>位置</label>
-      <input id="position" placeholder="例 KP5.54 R">
-    </div>
-  </div>
-
-  <div class="row">
-    <div><label>温度（℃）</label><input id="temperature" inputmode="decimal" placeholder="例 150"></div>
-    <div><label>左下番号</label><input id="smallNo" inputmode="numeric" placeholder="例 35"></div>
-  </div>
-
-  <div class="row">
-    <div><label>W（m）</label><input id="widthM" inputmode="decimal" placeholder="例 1.20"></div>
-    <div><label>L（m）</label><input id="lengthM" inputmode="decimal" placeholder="例 9.20"></div>
-  </div>
-
-  <label>右側表示</label>
-  <div class="state-tabs">
-    <button id="beforeBtn" class="active" onclick="setState('施工前')">施工前</button>
-    <button id="doneBtn" onclick="setState('施工完了')">施工完了</button>
-  </div>
-
-  <label>会社名</label>
-  <input id="company" value="道央環境(株)">
-
-  <div class="range-row">
-    <div><label>黒板サイズ</label><input id="sizeRange" type="range" min="24" max="72" value="46" oninput="resizeOverlay()"></div>
-    <button class="btn-gray" onclick="resetOverlay()">位置戻す</button>
-  </div>
-</div>
-
-<div class="card camera-card">
-  <div id="cameraShell" class="camera-shell">
-    <video id="video" autoplay playsinline muted></video>
-    <div id="overlay"><canvas id="board" width="1400" height="1000"></canvas></div>
-  </div>
-  <div class="capture-bar"><button class="btn-green" onclick="capturePhoto()">撮影して保存</button></div>
-  <div class="fullscreen-controls">
-    <button id="fullClose">戻る</button>
-    <button class="full-shutter" id="fullShutter" aria-label="撮影"></button>
-    <button id="fullSwitch">前後切替</button>
-  </div>
-  <div class="rotate-guide">スマホを横向きにしてください</div>
-  <div class="capture-flash" id="captureFlash"></div>
-  <div class="warn">正式な改ざん検知付き電子小黒板ではありません。試験運用・社内確認用です。</div>
-</div>
-
-<div class="credit">
-  <strong>企画・設計・開発：石川義晴</strong><br>
-  AI開発支援：ChatGPT<br>
-  現場実務から生まれたKP野帳プロジェクト
-</div>
+<div class="card camera-card"><div id="cameraShell" class="camera-shell"><video id="video" autoplay playsinline muted></video><div id="overlay"><canvas id="board" width="1400" height="1000"></canvas></div></div><div class="capture-bar"><button class="btn-green" onclick="capturePhoto()">撮影して保存</button></div><div class="fullscreen-controls"><button id="fullClose">戻る</button><button class="full-shutter" id="fullShutter" aria-label="撮影"></button><button id="fullSwitch">前後切替</button></div><div class="rotate-guide">スマホを横向きにしてください</div><div class="capture-flash" id="captureFlash"></div><div class="warn">正式な改ざん検知付き電子小黒板ではありません。試験運用・社内確認用です。</div></div>
+<div class="credit"><strong>企画・設計・開発：石川義晴</strong><br>AI開発支援：ChatGPT<br>現場実務から生まれたKP野帳プロジェクト</div>
 </main>
 <script>
-let stream=null,facingMode='environment',state='施工前',capturing=false,resultUrl='';
-const $=id=>document.getElementById(id),v=id=>$(id).value.trim();
-const FONT='"Yu Gothic","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif';
-
-function saveSettings(){
-  const d={state,project:v('project'),workType:v('workType'),position:v('position'),temperature:v('temperature'),widthM:v('widthM'),lengthM:v('lengthM'),smallNo:v('smallNo'),company:v('company')};
-  localStorage.setItem('kp_camera_manual_v2',JSON.stringify(d));
-}
-function loadSettings(){
-  try{
-    const d=JSON.parse(localStorage.getItem('kp_camera_manual_v2')||'{}');
-    ['project','workType','position','temperature','widthM','lengthM','smallNo','company'].forEach(id=>{if(d[id]!==undefined)$(id).value=d[id]});
-    setState(d.state||'施工前');
-  }catch(e){}
-}
+let stream=null,facingMode='environment',state='施工前',capturing=false,resultUrl='';const $=id=>document.getElementById(id),v=id=>$(id).value.trim();const FONT='"Yu Gothic","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif';
+function saveSettings(){const d={state,project:v('project'),workType:v('workType'),position:v('position'),temperature:v('temperature'),widthM:v('widthM'),lengthM:v('lengthM'),smallNo:v('smallNo'),company:v('company')};localStorage.setItem('kp_camera_manual_v2',JSON.stringify(d))}
+function loadSettings(){try{const d=JSON.parse(localStorage.getItem('kp_camera_manual_v2')||'{}');['project','workType','position','temperature','widthM','lengthM','smallNo','company'].forEach(id=>{if(d[id]!==undefined)$(id).value=d[id]});setState(d.state||'施工前')}catch(e){}}
 function setState(s){state=s;$('beforeBtn').classList.toggle('active',s==='施工前');$('doneBtn').classList.toggle('active',s==='施工完了');drawBoard()}
 function fit(ctx,text,max,start,min=18,weight=700){let s=start;while(s>min){ctx.font=`${weight} ${s}px ${FONT}`;if(ctx.measureText(String(text||'')).width<=max)break;s-=2}return s}
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
-function drawText(ctx,text,x,y,w,h,start=48,align='left',blank='—'){
-  const value=String(text||blank),s=fit(ctx,value,w-28,start,20,700);
-  ctx.font=`700 ${s}px ${FONT}`;ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign=align;
-  ctx.fillText(value,align==='center'?x+w/2:x+16,y+h/2);
-}
-function drawDimensions(ctx,x,y,w,h){
-  const wText=`W＝${v('widthM')||'—'}m`,lText=`L＝${v('lengthM')||'—'}m`;
-  const s=Math.min(fit(ctx,wText,w-30,46,22,700),fit(ctx,lText,w-30,46,22,700));
-  ctx.font=`700 ${s}px ${FONT}`;ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';
-  ctx.fillText(wText,x+16,y+h*.34);ctx.fillText(lText,x+16,y+h*.70);
-}
-function drawBoard(){
-  saveSettings();
-  const c=$('board'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
-  const metal=ctx.createLinearGradient(0,0,0,c.height);metal.addColorStop(0,'#fafafa');metal.addColorStop(.5,'#d8d8d8');metal.addColorStop(1,'#f4f4f4');
-  ctx.fillStyle=metal;rr(ctx,18,18,1364,964,34);ctx.fill();ctx.strokeStyle='#bbb';ctx.lineWidth=4;ctx.stroke();
-  const bx=46,by=48,bw=1308,bh=904;const g=ctx.createRadialGradient(700,400,80,700,500,850);g.addColorStop(0,'#08734c');g.addColorStop(.58,'#05613f');g.addColorStop(1,'#034a31');
-  ctx.fillStyle=g;rr(ctx,bx,by,bw,bh,18);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=5;rr(ctx,bx+12,by+12,bw-24,bh-24,12);ctx.stroke();
-
-  const ix=64,iy=66,iw=1272,ih=868,headerH=124,cy=iy+headerH,leftW=680,rx=ix+leftW,rw=iw-leftW,labelW=255,rowH=145;
-  ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(ix,cy);ctx.lineTo(ix+iw,cy);ctx.stroke();
-  drawText(ctx,'工 事 名',ix,iy,245,headerH,56,'left','');
-  drawText(ctx,v('project'),ix+245,iy,iw-245,headerH,50,'left','工事名');
-  ctx.beginPath();ctx.moveTo(rx,cy);ctx.lineTo(rx,iy+ih);ctx.stroke();
-
-  const labels=['工　種','位　置','設計寸法','実測寸法'];
-  const values=[v('workType'),v('position'),'',v('temperature')?`温度 ${v('temperature')}℃`:'温度 —'];
-  for(let i=0;i<4;i++){
-    const y=cy+i*rowH;
-    ctx.beginPath();ctx.moveTo(ix,y+rowH);ctx.lineTo(rx,y+rowH);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(ix+labelW,y);ctx.lineTo(ix+labelW,y+rowH);ctx.stroke();
-    drawText(ctx,labels[i],ix,y,labelW,rowH,48,'center','');
-    if(i===2)drawDimensions(ctx,ix+labelW,y,leftW-labelW,rowH);
-    else drawText(ctx,values[i],ix+labelW,y,leftW-labelW,rowH,48,'left','—');
-  }
-
-  drawText(ctx,'略　図',rx,cy,rw,86,45,'center','');
-  const lines=state==='施工完了'?['施工','完了']:['施工前'];
-  ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 106px ${FONT}`;
-  const gap=132,start=cy+260-(lines.length-1)*gap/2;
-  lines.forEach((t,i)=>ctx.fillText(t,rx+rw/2,start+i*gap));
-
-  ctx.font=`600 25px ${FONT}`;ctx.textAlign='left';ctx.fillText(v('smallNo'),ix+14,iy+ih-14);
-  ctx.textAlign='right';ctx.font=`700 ${fit(ctx,v('company'),rw-40,46,28)}px ${FONT}`;ctx.fillText(v('company'),ix+iw-18,iy+ih-18);
-}
-
+function drawText(ctx,text,x,y,w,h,start=48,align='left',blank='—'){const value=String(text||blank),s=fit(ctx,value,w-28,start,20,700);ctx.font=`700 ${s}px ${FONT}`;ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign=align;ctx.fillText(value,align==='center'?x+w/2:x+16,y+h/2)}
+function drawDimensions(ctx,x,y,w,h){const lines=[];if(v('widthM'))lines.push(`W＝${v('widthM')}m`);if(v('lengthM'))lines.push(`L＝${v('lengthM')}m`);if(!lines.length)return;const s=Math.min(...lines.map(t=>fit(ctx,t,w-30,46,22,700)));ctx.font=`700 ${s}px ${FONT}`;ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='middle';if(lines.length===1){ctx.fillText(lines[0],x+16,y+h/2)}else{ctx.fillText(lines[0],x+16,y+h*.34);ctx.fillText(lines[1],x+16,y+h*.70)}}
+function drawBoard(){saveSettings();const c=$('board'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);const metal=ctx.createLinearGradient(0,0,0,c.height);metal.addColorStop(0,'#fafafa');metal.addColorStop(.5,'#d8d8d8');metal.addColorStop(1,'#f4f4f4');ctx.fillStyle=metal;rr(ctx,18,18,1364,964,34);ctx.fill();ctx.strokeStyle='#bbb';ctx.lineWidth=4;ctx.stroke();const bx=46,by=48,bw=1308,bh=904,g=ctx.createRadialGradient(700,400,80,700,500,850);g.addColorStop(0,'#08734c');g.addColorStop(.58,'#05613f');g.addColorStop(1,'#034a31');ctx.fillStyle=g;rr(ctx,bx,by,bw,bh,18);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=5;rr(ctx,bx+12,by+12,bw-24,bh-24,12);ctx.stroke();const ix=64,iy=66,iw=1272,ih=868,headerH=124,cy=iy+headerH,leftW=680,rx=ix+leftW,rw=iw-leftW,labelW=255,rowH=145;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(ix,cy);ctx.lineTo(ix+iw,cy);ctx.stroke();drawText(ctx,'工 事 名',ix,iy,245,headerH,56,'left','');drawText(ctx,v('project'),ix+245,iy,iw-245,headerH,50,'left','工事名');ctx.beginPath();ctx.moveTo(rx,cy);ctx.lineTo(rx,iy+ih);ctx.stroke();const labels=['工　種','位　置','設計寸法','実測寸法'],values=[v('workType'),v('position'),'',v('temperature')?`温度 ${v('temperature')}℃`:''];for(let i=0;i<4;i++){const y=cy+i*rowH;ctx.beginPath();ctx.moveTo(ix,y+rowH);ctx.lineTo(rx,y+rowH);ctx.stroke();ctx.beginPath();ctx.moveTo(ix+labelW,y);ctx.lineTo(ix+labelW,y+rowH);ctx.stroke();drawText(ctx,labels[i],ix,y,labelW,rowH,48,'center','');if(i===2)drawDimensions(ctx,ix+labelW,y,leftW-labelW,rowH);else if(values[i])drawText(ctx,values[i],ix+labelW,y,leftW-labelW,rowH,48,'left','')}drawText(ctx,'略　図',rx,cy,rw,86,45,'center','');const lines=state==='施工完了'?['施工','完了']:['施工前'];ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 106px ${FONT}`;const gap=132,start=cy+260-(lines.length-1)*gap/2;lines.forEach((t,i)=>ctx.fillText(t,rx+rw/2,start+i*gap));ctx.font=`600 25px ${FONT}`;ctx.textAlign='left';ctx.fillText(v('smallNo'),ix+14,iy+ih-14);ctx.textAlign='right';ctx.font=`700 ${fit(ctx,v('company'),rw-40,46,28)}px ${FONT}`;ctx.fillText(v('company'),ix+iw-18,iy+ih-18)}
 async function startCamera(){stopCamera();try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080}},audio:false});$('video').srcObject=stream;await $('video').play();$('cameraStatus').textContent=(facingMode==='environment'?'背面':'前面')+'カメラ起動中';return true}catch(e){$('cameraStatus').textContent='カメラ起動失敗：'+e.message;return false}}
-function stopCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null;$('cameraStatus').textContent='カメラ停止中'}
-async function switchCamera(){facingMode=facingMode==='environment'?'user':'environment';await startCamera()}
-function resizeOverlay(){$('overlay').style.width=v('sizeRange')+'%'}
-function resetOverlay(){$('overlay').style.left='3%';$('overlay').style.top='';$('overlay').style.bottom='3%';$('sizeRange').value='46';resizeOverlay()}
+function stopCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null;$('cameraStatus').textContent='カメラ停止中'}async function switchCamera(){facingMode=facingMode==='environment'?'user':'environment';await startCamera()}function resizeOverlay(){$('overlay').style.width=v('sizeRange')+'%'}function resetOverlay(){$('overlay').style.left='3%';$('overlay').style.top='';$('overlay').style.bottom='3%';$('sizeRange').value='46';resizeOverlay()}
 async function enterShootingMode(){if(!stream&&!(await startCamera()))return;document.body.classList.add('shooting-mode');try{if(document.documentElement.requestFullscreen&&!document.fullscreenElement)await document.documentElement.requestFullscreen()}catch(e){}try{await screen.orientation?.lock?.('landscape')}catch(e){}}
 async function exitShootingMode(){document.body.classList.remove('shooting-mode');try{if(document.fullscreenElement)await document.exitFullscreen()}catch(e){}try{screen.orientation?.unlock?.()}catch(e){}}
 (function(){const el=$('overlay'),shell=$('cameraShell');let drag=false,sx=0,sy=0,sl=0,st=0;el.addEventListener('pointerdown',e=>{drag=true;el.setPointerCapture(e.pointerId);const a=el.getBoundingClientRect(),b=shell.getBoundingClientRect();sx=e.clientX;sy=e.clientY;sl=a.left-b.left;st=a.top-b.top;el.style.bottom='auto';e.preventDefault()});el.addEventListener('pointermove',e=>{if(!drag)return;const b=shell.getBoundingClientRect(),a=el.getBoundingClientRect();let l=sl+e.clientX-sx,t=st+e.clientY-sy;l=Math.max(0,Math.min(l,b.width-a.width));t=Math.max(0,Math.min(t,b.height-a.height));el.style.left=l+'px';el.style.top=t+'px';e.preventDefault()});el.addEventListener('pointerup',()=>drag=false)})();
-function flash(){const f=$('captureFlash');f.classList.add('on');setTimeout(()=>f.classList.remove('on'),110)}
-function capturePhoto(){if(capturing||!stream||!$('video').videoWidth)return alert('先にカメラを開始してください。');capturing=true;flash();drawBoard();const video=$('video'),out=document.createElement('canvas'),ctx=out.getContext('2d');out.width=video.videoWidth;out.height=video.videoHeight;ctx.drawImage(video,0,0,out.width,out.height);const shell=$('cameraShell').getBoundingClientRect(),ov=$('overlay').getBoundingClientRect();ctx.drawImage($('board'),(ov.left-shell.left)*out.width/shell.width,(ov.top-shell.top)*out.height/shell.height,ov.width*out.width/shell.width,ov.height*out.height/shell.height);resultUrl=out.toDataURL('image/jpeg',.94);const a=document.createElement('a');a.href=resultUrl;a.download=new Date().toISOString().replace(/[:.]/g,'-')+'_KP野帳カメラ.jpg';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>capturing=false,500)}
-['project','workType','position','temperature','widthM','lengthM','smallNo','company'].forEach(id=>$(id).addEventListener('input',drawBoard));
-$('fullShutter').addEventListener('pointerup',e=>{e.preventDefault();capturePhoto()});$('fullClose').addEventListener('pointerup',e=>{e.preventDefault();exitShootingMode()});$('fullSwitch').addEventListener('pointerup',e=>{e.preventDefault();switchCamera()});
-window.addEventListener('beforeunload',stopCamera);loadSettings();resizeOverlay();drawBoard();
+function flash(){const f=$('captureFlash');f.classList.add('on');setTimeout(()=>f.classList.remove('on'),110)}function capturePhoto(){if(capturing||!stream||!$('video').videoWidth)return alert('先にカメラを開始してください。');capturing=true;flash();drawBoard();const video=$('video'),out=document.createElement('canvas'),ctx=out.getContext('2d');out.width=video.videoWidth;out.height=video.videoHeight;ctx.drawImage(video,0,0,out.width,out.height);const shell=$('cameraShell').getBoundingClientRect(),ov=$('overlay').getBoundingClientRect();ctx.drawImage($('board'),(ov.left-shell.left)*out.width/shell.width,(ov.top-shell.top)*out.height/shell.height,ov.width*out.width/shell.width,ov.height*out.height/shell.height);resultUrl=out.toDataURL('image/jpeg',.94);const a=document.createElement('a');a.href=resultUrl;a.download=new Date().toISOString().replace(/[:.]/g,'-')+'_KP野帳カメラ.jpg';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>capturing=false,500)}
+['project','workType','position','temperature','widthM','lengthM','smallNo','company'].forEach(id=>$(id).addEventListener('input',drawBoard));$('fullShutter').addEventListener('pointerup',e=>{e.preventDefault();capturePhoto()});$('fullClose').addEventListener('pointerup',e=>{e.preventDefault();exitShootingMode()});$('fullSwitch').addEventListener('pointerup',e=>{e.preventDefault();switchCamera()});window.addEventListener('beforeunload',stopCamera);loadSettings();resizeOverlay();drawBoard();
 </script>
 </body>
 </html>
