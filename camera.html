@@ -24,9 +24,10 @@ video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgrou
 #overlay{position:absolute;left:3%;bottom:3%;width:46%;max-width:560px;min-width:150px;cursor:move;touch-action:none;filter:drop-shadow(0 2px 5px #000c)}
 #overlay canvas{display:block;width:100%;height:auto}.capture-bar{display:flex;margin-top:10px}.capture-bar button{flex:1}
 .warn{margin-top:10px;background:#3a3008;border:1px solid #7e6a12;color:#ffe28a;padding:9px;border-radius:9px;font-size:13px}
+.credit{text-align:center;color:#b9b9b9;font-size:13px;line-height:1.7;padding:8px 12px 18px}.credit strong{color:#fff}
 .fullscreen-controls,.rotate-guide,.capture-flash{display:none}
 body.shooting-mode{overflow:hidden;background:#000}
-body.shooting-mode header,body.shooting-mode main>.card:not(.camera-card),body.shooting-mode .camera-card>.warn,body.shooting-mode .capture-bar{display:none!important}
+body.shooting-mode header,body.shooting-mode main>.card:not(.camera-card),body.shooting-mode .camera-card>.warn,body.shooting-mode .capture-bar,body.shooting-mode .credit{display:none!important}
 body.shooting-mode main{padding:0;max-width:none;width:100vw;height:100dvh}
 body.shooting-mode .camera-card{margin:0;padding:0;border:0;border-radius:0;width:100vw;height:100dvh}
 body.shooting-mode .camera-shell{position:fixed;inset:0;width:100vw;height:100dvh;aspect-ratio:auto;border:0;border-radius:0;z-index:100}
@@ -109,6 +110,12 @@ body.shooting-mode .capture-flash.on{opacity:.88}
   <div class="rotate-guide">スマホを横向きにしてください</div>
   <div class="capture-flash" id="captureFlash"></div>
   <div class="warn">正式な改ざん検知付き電子小黒板ではありません。試験運用・社内確認用です。</div>
+</div>
+
+<div class="credit">
+  <strong>企画・設計・開発：石川義晴</strong><br>
+  AI開発支援：ChatGPT<br>
+  現場実務から生まれたKP野帳プロジェクト
 </div>
 </main>
 <script>
