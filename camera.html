@@ -14,6 +14,7 @@ main{padding:12px;max-width:900px;margin:auto}.card{background:var(--card);borde
 label{display:block;color:var(--muted);font-size:13px;margin-top:9px}select,input{width:100%;padding:11px;margin-top:5px;border-radius:10px;border:1px solid #555;background:#292c31;color:var(--text);font-size:16px}
 button,a.btn{border:0;border-radius:10px;padding:11px 13px;font-size:15px;font-weight:800;color:white;background:#0d6efd;text-decoration:none;text-align:center}.btn-green{background:var(--green);color:#031407}.btn-red{background:var(--red)}.btn-gray{background:var(--gray)}
 .row{display:flex;gap:8px}.row>*{flex:1}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar>*{flex:1;min-width:130px}
+.camera-card{position:relative}
 .camera-shell{position:relative;width:100%;aspect-ratio:3/4;background:#111;overflow:hidden;border-radius:14px;border:1px solid var(--line);touch-action:none}
 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
 #overlay{position:absolute;left:3%;bottom:3%;width:46%;max-width:520px;min-width:150px;cursor:move;touch-action:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.75))}
@@ -22,6 +23,17 @@ video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgrou
 #resultWrap{display:none}#result{width:100%;border-radius:12px;border:1px solid var(--line);background:#111}
 .range-row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:end}
 .warn{background:#3a3008;border:1px solid #7e6a12;color:#ffe28a;padding:9px;border-radius:9px;font-size:13px}
+.fullscreen-controls{display:none}
+body.shooting-mode{overflow:hidden;background:#000}
+body.shooting-mode header,body.shooting-mode main>.card:not(.camera-card),body.shooting-mode .camera-card>.warn{display:none!important}
+body.shooting-mode main{padding:0;max-width:none;width:100vw;height:100dvh;margin:0}
+body.shooting-mode .camera-card{display:block!important;margin:0;padding:0;border:0;border-radius:0;background:#000;width:100vw;height:100dvh}
+body.shooting-mode .camera-shell{position:fixed;inset:0;width:100vw;height:100dvh;aspect-ratio:auto;border:0;border-radius:0;z-index:100}
+body.shooting-mode .fullscreen-controls{display:flex;position:fixed;z-index:120;left:0;right:0;bottom:0;padding:12px max(12px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));gap:10px;align-items:center;background:linear-gradient(transparent,rgba(0,0,0,.78));pointer-events:none}
+body.shooting-mode .fullscreen-controls button{pointer-events:auto}
+body.shooting-mode .fullscreen-controls .full-shutter{width:76px;height:76px;min-width:76px;flex:0 0 76px;border-radius:50%;padding:0;border:6px solid rgba(255,255,255,.9);background:#fff;box-shadow:0 0 0 3px rgba(0,0,0,.35)}
+body.shooting-mode .fullscreen-controls .full-close,body.shooting-mode .fullscreen-controls .full-switch{flex:1;background:rgba(30,30,30,.78);backdrop-filter:blur(8px)}
+body.shooting-mode #overlay{max-width:none}
 @media(max-width:560px){main{padding:8px}.row{display:block}.toolbar>*{min-width:100%}.camera-shell{aspect-ratio:3/4}.range-row{grid-template-columns:1fr 92px}}
 </style>
 </head>
@@ -31,6 +43,7 @@ video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgrou
 <div class="card">
   <div class="toolbar">
     <button onclick="startCamera()">背面カメラ開始</button>
+    <button class="btn-green" onclick="enterShootingMode()">全画面撮影</button>
     <button class="btn-gray" onclick="switchCamera()">前後切替</button>
     <button class="btn-gray" onclick="stopCamera()">停止</button>
   </div>
@@ -51,13 +64,18 @@ video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;backgrou
   <div class="sub">黒板は指で移動できます。サイズはスライダーで調整。</div>
 </div>
 
-<div class="card">
+<div class="card camera-card">
   <div id="cameraShell" class="camera-shell">
     <video id="video" autoplay playsinline muted></video>
     <div id="overlay"><canvas id="board" width="1000" height="720"></canvas></div>
   </div>
   <div class="capture-bar">
     <button class="btn-green shutter" onclick="capturePhoto()">撮影して保存</button>
+  </div>
+  <div class="fullscreen-controls">
+    <button class="full-close" onclick="exitShootingMode()">戻る</button>
+    <button class="full-shutter" aria-label="撮影" onclick="capturePhoto()"></button>
+    <button class="full-switch" onclick="switchCamera()">前後切替</button>
   </div>
   <div class="warn" style="margin-top:10px">このβ版は正式な改ざん検知付き電子小黒板ではありません。試験運用・社内確認用として使用してください。</div>
 </div>
@@ -101,54 +119,60 @@ function getCurrentData(){
   const draft=boardDataFromDraft();
   const i=parseInt(v("recordSelect"),10), it=(yachoData&&Number.isInteger(i))?yachoData.items?.[i]:null;
   return {
-    project:draft.project||"工事名",
-    work:draft.work||"舗装補修",
+    project:draft.project||"工事名",work:draft.work||"舗装補修",
     position:it?(it.kp?`KP${formatKP(it.kp)} ${it.side||""}`:"—"):(draft.kp||"—"),
     design:draft.design||"—",
     actual:it?`${it.formula||""}${it.area!==undefined?` = ${Number(it.area||0).toFixed(2)}㎡`:""}`:(draft.measure||"—"),
-    state:v("state"),
-    smallNo:v("smallNo")||displayNo(it)||"",
-    company:draft.company||"株式会社RYUTEC"
+    state:v("state"),smallNo:v("smallNo")||displayNo(it)||"",company:draft.company||"株式会社RYUTEC"
   }
 }
 function drawBoard(){
   const c=$("board"),ctx=c.getContext("2d"),d=getCurrentData();
-  const W=c.width,H=c.height, pad=18, topH=105, leftW=560, labelW=185, rowH=115;
+  const W=c.width,H=c.height,pad=18,topH=105,leftW=560,labelW=185,rowH=115;
   ctx.clearRect(0,0,W,H);ctx.fillStyle="#0b5b2c";ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle="#fff";ctx.lineWidth=7;ctx.strokeRect(pad,pad,W-pad*2,H-pad*2);
-  ctx.lineWidth=4;
+  ctx.strokeStyle="#fff";ctx.lineWidth=7;ctx.strokeRect(pad,pad,W-pad*2,H-pad*2);ctx.lineWidth=4;
   ctx.beginPath();ctx.moveTo(pad,pad+topH);ctx.lineTo(W-pad,pad+topH);ctx.stroke();
   ctx.beginPath();ctx.moveTo(leftW,pad+topH);ctx.lineTo(leftW,H-pad);ctx.stroke();
   ctx.beginPath();ctx.moveTo(labelW,pad+topH);ctx.lineTo(labelW,H-pad);ctx.stroke();
   for(let r=1;r<4;r++){const y=pad+topH+rowH*r;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(leftW,y);ctx.stroke()}
   ctx.fillStyle="#fff";ctx.textBaseline="middle";ctx.textAlign="center";ctx.font="700 34px sans-serif";ctx.fillText("工事名",102,pad+topH/2);
   const ps=fitText(ctx,d.project,W-245,42,24,700);ctx.font=`700 ${ps}px sans-serif`;ctx.textAlign="left";ctx.fillText(d.project,205,pad+topH/2);
-  const labels=["工種","位置","設計寸法","実測寸法"], vals=[d.work,d.position,d.design,d.actual];
+  const labels=["工種","位置","設計寸法","実測寸法"],vals=[d.work,d.position,d.design,d.actual];
   labels.forEach((lab,i)=>{const cy=pad+topH+rowH*i+rowH/2;ctx.font="700 30px sans-serif";ctx.textAlign="center";ctx.fillText(lab,(pad+labelW)/2,cy);const s=fitText(ctx,vals[i]||"—",leftW-labelW-24,34,20,700);ctx.font=`700 ${s}px sans-serif`;ctx.textAlign="left";ctx.fillText(vals[i]||"—",labelW+12,cy)});
   ctx.font="700 30px sans-serif";ctx.textAlign="center";ctx.fillText("略図",(leftW+W-pad)/2,pad+topH+28);
-  if(d.state!=="空欄"){
-    const chars=[...d.state];ctx.font="800 78px sans-serif";ctx.textAlign="center";const cx=(leftW+W-pad)/2, startY=pad+topH+150;
-    chars.forEach((ch,i)=>ctx.fillText(ch,cx,startY+i*84));
-  }
+  if(d.state!=="空欄"){const chars=[...d.state];ctx.font="800 78px sans-serif";ctx.textAlign="center";const cx=(leftW+W-pad)/2,startY=pad+topH+150;chars.forEach((ch,i)=>ctx.fillText(ch,cx,startY+i*84))}
   ctx.font="700 28px sans-serif";ctx.textAlign="left";ctx.fillText(d.smallNo,pad+10,H-pad-18);
   ctx.font="500 24px sans-serif";ctx.textAlign="right";ctx.fillText(d.company,W-pad-12,H-pad-18);
 }
 
 async function startCamera(){
   stopCamera();
-  if(!navigator.mediaDevices?.getUserMedia){$("cameraStatus").innerText="このブラウザはカメラAPIに対応していません。";return}
+  if(!navigator.mediaDevices?.getUserMedia){$("cameraStatus").innerText="このブラウザはカメラAPIに対応していません。";return false}
   try{
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facingMode},width:{ideal:1920},height:{ideal:1080}},audio:false});
-    $("video").srcObject=stream;await $("video").play();$("cameraStatus").innerText=(facingMode==="environment"?"背面":"前面")+"カメラ起動中";
-  }catch(e){$("cameraStatus").innerText="カメラ起動失敗："+e.message}
+    $("video").srcObject=stream;await $("video").play();$("cameraStatus").innerText=(facingMode==="environment"?"背面":"前面")+"カメラ起動中";return true;
+  }catch(e){$("cameraStatus").innerText="カメラ起動失敗："+e.message;return false}
 }
 function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$("video").srcObject=null;$("cameraStatus").innerText="カメラ停止中"}
 async function switchCamera(){facingMode=facingMode==="environment"?"user":"environment";await startCamera()}
 function resizeOverlay(){$("overlay").style.width=v("sizeRange")+"%"}
 function resetOverlay(){$("overlay").style.left="3%";$("overlay").style.top="";$("overlay").style.bottom="3%";$("sizeRange").value="46";resizeOverlay()}
 
+async function enterShootingMode(){
+  if(!stream){const ok=await startCamera();if(!ok)return}
+  document.body.classList.add("shooting-mode");
+  try{if(document.documentElement.requestFullscreen&&!document.fullscreenElement)await document.documentElement.requestFullscreen()}catch(e){}
+  if(screen.orientation?.lock){try{await screen.orientation.lock("portrait")}catch(e){}}
+}
+async function exitShootingMode(){
+  document.body.classList.remove("shooting-mode");
+  if(document.fullscreenElement){try{await document.exitFullscreen()}catch(e){}}
+  if(screen.orientation?.unlock){try{screen.orientation.unlock()}catch(e){}}
+}
+document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement)document.body.classList.remove("shooting-mode")});
+
 (function enableDrag(){
-  const el=$("overlay"), shell=$("cameraShell");let dragging=false, sx=0,sy=0,sl=0,st=0;
+  const el=$("overlay"),shell=$("cameraShell");let dragging=false,sx=0,sy=0,sl=0,st=0;
   el.addEventListener("pointerdown",e=>{dragging=true;el.setPointerCapture(e.pointerId);const er=el.getBoundingClientRect(),sr=shell.getBoundingClientRect();sx=e.clientX;sy=e.clientY;sl=er.left-sr.left;st=er.top-sr.top;el.style.bottom="auto";e.preventDefault()});
   el.addEventListener("pointermove",e=>{if(!dragging)return;const sr=shell.getBoundingClientRect(),er=el.getBoundingClientRect();let l=sl+e.clientX-sx,t=st+e.clientY-sy;l=Math.max(0,Math.min(l,sr.width-er.width));t=Math.max(0,Math.min(t,sr.height-er.height));el.style.left=l+"px";el.style.top=t+"px";e.preventDefault()});
   el.addEventListener("pointerup",()=>dragging=false);el.addEventListener("pointercancel",()=>dragging=false);
@@ -161,7 +185,8 @@ function capturePhoto(){
   const shell=$("cameraShell").getBoundingClientRect(),ov=$("overlay").getBoundingClientRect();
   const scaleX=out.width/shell.width,scaleY=out.height/shell.height;
   ctx.drawImage($("board"),(ov.left-shell.left)*scaleX,(ov.top-shell.top)*scaleY,ov.width*scaleX,ov.height*scaleY);
-  resultUrl=out.toDataURL("image/jpeg",0.94);$("result").src=resultUrl;$("resultWrap").style.display="block";$("resultWrap").scrollIntoView({behavior:"smooth"});
+  resultUrl=out.toDataURL("image/jpeg",0.94);$("result").src=resultUrl;downloadResult();
+  if(!document.body.classList.contains("shooting-mode")){$("resultWrap").style.display="block";$("resultWrap").scrollIntoView({behavior:"smooth"})}
 }
 function downloadResult(){if(!resultUrl)return;const a=document.createElement("a"),now=new Date();a.href=resultUrl;a.download=`${now.toISOString().replace(/[:.]/g,"-")}_KP野帳カメラ.jpg`;a.click()}
 window.addEventListener("beforeunload",stopCamera);
