@@ -3,237 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KP野帳 Excelコピペ</title>
+<title>KP野帳 Excelコピペ（安全版）</title>
 <style>
-:root{
-  --bg:#070707;--card:#14161a;--text:#f5f5f5;--muted:#a8a8a8;
-  --blue:#79aaff;--green:#25c05a;--red:#ff5a5f;--gray:#555b63;--line:#333842;--warn:#f6c343;
-}
-*{box-sizing:border-box}
-body{margin:0;padding:14px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-h1{font-size:28px;margin:8px 0 16px}
-h2{font-size:20px;color:var(--blue);border-bottom:2px solid var(--blue);padding-bottom:7px;margin:0 0 12px}
+:root{--bg:#070707;--card:#14161a;--text:#f5f5f5;--muted:#aaa;--blue:#79aaff;--green:#25c05a;--gray:#555b63;--line:#333842;--warn:#f6c343}
+*{box-sizing:border-box}body{margin:0;padding:14px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+h1{font-size:27px;margin:8px 0 16px}h2{font-size:20px;color:var(--blue);border-bottom:2px solid var(--blue);padding-bottom:7px;margin:0 0 12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
-button{border:0;border-radius:10px;padding:12px 14px;font-size:16px;font-weight:700;color:#fff;background:#0d6efd;margin:5px 3px 5px 0}
-.btn-green{background:var(--green);color:#031407}.btn-gray{background:var(--gray)}.btn-red{background:var(--red)}
-.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
-.box{background:#0d0f12;border:1px solid var(--line);border-radius:12px;padding:10px}
-.box span{display:block;color:var(--muted);font-size:12px}.box b{display:block;font-size:20px;margin-top:3px}
-.sub{font-size:13px;color:var(--muted);line-height:1.55}
-.warn{background:#3a3008;border:1px solid #7e6a12;color:#ffe28a;padding:10px;border-radius:10px;margin-top:8px}
-.ok{background:#11391f;border:1px solid #256d39;color:#8cffaa;padding:10px;border-radius:10px;margin-top:8px}
-label{display:flex;align-items:center;gap:7px;margin:8px 0;font-size:15px}
-input[type="checkbox"],input[type="radio"]{width:auto}
-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;background:#fff;color:#111}
-th,td{border:1px solid #aaa;padding:7px 5px;text-align:left;white-space:nowrap}
-th{background:#e7e7e7}.right{text-align:right}
-.scroll{overflow-x:auto;border-radius:10px}
-textarea{width:100%;min-height:150px;padding:10px;border-radius:10px;border:1px solid #555;background:#202328;color:var(--text);font-size:13px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-.actions{display:flex;flex-wrap:wrap;gap:3px}
-.credit{text-align:center;color:#777;font-size:12px;margin:20px 0 4px}
+button{border:0;border-radius:10px;padding:12px 14px;font-size:16px;font-weight:700;color:#fff;background:#0d6efd;margin:5px 3px 5px 0}.green{background:var(--green);color:#031407}.gray{background:var(--gray)}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}.box{background:#0d0f12;border:1px solid var(--line);border-radius:12px;padding:10px}.box span{display:block;color:var(--muted);font-size:12px}.box b{display:block;font-size:20px;margin-top:3px}
+.sub{font-size:13px;color:var(--muted);line-height:1.55}.warn{background:#3a3008;border:1px solid #7e6a12;color:#ffe28a;padding:10px;border-radius:10px;margin-top:8px}
+label{display:flex;align-items:center;gap:7px;margin:8px 0;font-size:15px}input[type="checkbox"]{width:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;color:#111}th,td{border:1px solid #aaa;padding:7px 5px;white-space:nowrap}th{background:#e7e7e7}.right{text-align:right}.scroll{overflow-x:auto;border-radius:10px}
+textarea{width:100%;min-height:130px;padding:10px;border-radius:10px;border:1px solid #555;background:#202328;color:var(--text);font-size:13px;font-family:ui-monospace,Consolas,monospace}.credit{text-align:center;color:#777;font-size:12px;margin:20px 0 4px}
 </style>
 </head>
 <body>
-<h1>KP野帳 → Excelコピペ</h1>
-
+<h1>KP野帳 → Excelコピペ（安全版）</h1>
 <div class="card">
-  <h2>読込状況</h2>
-  <div class="meta">
-    <div class="box"><span>施工日</span><b id="dateView">--</b></div>
-    <div class="box"><span>路線</span><b id="routeView">--</b></div>
-    <div class="box"><span>件数</span><b id="countView">0件</b></div>
-    <div class="box"><span>合計</span><b id="totalView">0.00㎡</b></div>
-  </div>
-  <button class="btn-green" onclick="loadYacho()">KP野帳から再読込</button>
-  <button class="btn-gray" onclick="location.href='./'">KP野帳へ戻る</button>
-  <div id="loadMessage" class="sub">同じ端末・同じブラウザのKP野帳保存データを読みます。</div>
+<h2>読込状況</h2>
+<div class="meta"><div class="box"><span>施工日</span><b id="dateView">--</b></div><div class="box"><span>路線</span><b id="routeView">--</b></div><div class="box"><span>件数</span><b id="countView">0件</b></div><div class="box"><span>合計</span><b id="totalView">0.00㎡</b></div></div>
+<button class="green" onclick="loadYacho()">KP野帳から再読込</button><button class="gray" onclick="location.href='./'">KP野帳へ戻る</button>
+<div id="loadMessage" class="sub">同じ端末・同じChromeの保存データを読みます。</div>
 </div>
-
 <div class="card">
-  <h2>出力設定</h2>
-  <label><input id="dailyNo" type="checkbox" checked onchange="renderAll()"> No.は日別連番（1、2、3…）にする</label>
-  <label><input id="dittoRoute" type="checkbox" checked onchange="renderAll()"> 路線は2行目以降「〃」にする</label>
-  <label><input id="onlyCurrentDate" type="checkbox" checked onchange="renderAll()"> 表示中の施工日だけ出力する</label>
-  <div class="sub">台形は、Excel左表用に「平均幅 × 長さ」へ自動変換。元の台形寸法は別表にも残します。</div>
+<h2>重要</h2>
+<div class="warn">元Excelの関数位置は未確認です。面積列へまとめて貼ると数式を上書きする恐れがあるため、この安全版は<strong>入力値だけ</strong>をコピーします。まずは列ごとに貼って確認してください。</div>
+<label><input id="dailyNo" type="checkbox" checked onchange="renderAll()"> No.を日別連番（1、2、3…）にする</label>
+<label><input id="dittoRoute" type="checkbox" checked onchange="renderAll()"> 路線は2行目以降「〃」にする</label>
 </div>
-
 <div class="card">
-  <h2>Excel左表用</h2>
-  <div class="actions">
-    <button class="btn-green" onclick="copyMainTable()">7列まとめてコピー</button>
-    <button onclick="copyColumn('no')">No列</button>
-    <button onclick="copyColumn('route')">路線列</button>
-    <button onclick="copyColumn('kp')">KP列</button>
-    <button onclick="copyColumn('side')">R/L列</button>
-    <button onclick="copyColumn('width')">幅列</button>
-    <button onclick="copyColumn('length')">延長列</button>
-    <button onclick="copyColumn('area')">面積列</button>
-    <button class="btn-gray" onclick="downloadCsv()">CSV保存</button>
-  </div>
-  <div class="sub">まとめて貼れない帳票では、必要な列だけコピーしてExcelの先頭セルへ貼り付け。</div>
-  <div class="scroll"><table>
-    <thead><tr><th>No.</th><th>路線</th><th>位置</th><th>L/R</th><th>幅(m)</th><th>延長(m)</th><th>面積(㎡)</th></tr></thead>
-    <tbody id="mainBody"></tbody>
-  </table></div>
+<h2>元Excelの入力欄用</h2>
+<button onclick="copyColumn('no','No列')">No列</button><button onclick="copyColumn('route','路線列')">路線列</button><button onclick="copyColumn('kp','KP列')">KP列</button><button onclick="copyColumn('side','R/L列')">R/L列</button><button onclick="copyColumn('width','幅列')">幅列</button><button onclick="copyColumn('length','延長列')">延長列</button>
+<button class="gray" onclick="copyInputTable()">入力値6列まとめて（試験用）</button>
+<div class="sub">台形は左表用に「平均幅×長さ」へ変換します。面積は元Excelの関数に計算させます。</div>
+<div class="scroll"><table><thead><tr><th>No.</th><th>路線</th><th>位置</th><th>L/R</th><th>幅(m)</th><th>延長(m)</th><th>面積確認</th></tr></thead><tbody id="mainBody"></tbody></table></div>
 </div>
-
 <div class="card">
-  <h2>台形・三角形の元寸法</h2>
-  <button onclick="copyShapeTable()">変形箇所をまとめてコピー</button>
-  <div class="scroll"><table>
-    <thead><tr><th>No.</th><th>KP</th><th>形状</th><th>長さ</th><th>幅1</th><th>幅2</th><th>面積</th></tr></thead>
-    <tbody id="shapeBody"></tbody>
-  </table></div>
-  <div id="shapeNote" class="sub"></div>
+<h2>台形・三角形の元寸法</h2>
+<button onclick="copyShapeTable()">変形箇所をコピー</button>
+<div class="scroll"><table><thead><tr><th>No.</th><th>KP</th><th>形状</th><th>長さ</th><th>幅1</th><th>幅2</th><th>面積確認</th></tr></thead><tbody id="shapeBody"></tbody></table></div>
+<div class="sub">右側の台形計算欄へ貼る並びは、元Excelの入力セルが分かってから確定します。</div>
 </div>
-
-<div class="card">
-  <h2>コピー内容の確認</h2>
-  <textarea id="copyPreview" readonly></textarea>
-</div>
-
-<div class="credit">KP野帳 Excelコピペ v0.1<br>Created by 株式会社RYUTEC 石川</div>
-
+<div class="card"><h2>コピー内容</h2><textarea id="copyPreview" readonly></textarea></div>
+<div class="credit">KP野帳 Excelコピペ v0.2 安全版<br>Created by 株式会社RYUTEC 石川</div>
 <script>
-const STORAGE_KEY="kp_yacho_v12";
-let sourceData=null;
-let outputRows=[];
-let shapeRows=[];
-
-function esc(v){return String(v??"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]))}
-function n(v){const x=parseFloat(v);return Number.isFinite(x)?x:0}
-function f2(v){return n(v).toFixed(2)}
-function noText(it){return it.branch?String(it.no||"")+"-"+String(it.branch):String(it.no||"")}
-function formatKp(v){const x=parseFloat(v);return Number.isFinite(x)?x.toFixed(2):String(v||"")}
-
-function itemToExcel(it,index,routeText){
-  const shape=it.shape||"manual";
-  let width="", length="", note="";
-  const w=n(it.w), l1=n(it.l1), l2=n(it.l2), area=n(it.area);
-
-  if(shape==="rect"){
-    width=w; length=l1;
-  }else if(shape==="trap"){
-    width=(l1+l2)/2; length=w;
-    note="台形→平均幅";
-  }else if(shape==="tri"){
-    width=w/2; length=l1;
-    note="三角形→1/2幅";
-  }else{
-    note="直接入力：幅・延長なし";
-  }
-
-  return {
-    no:document.getElementById("dailyNo").checked?String(index+1):noText(it),
-    originalNo:noText(it),
-    route:routeText,
-    kp:it.kp?("KP"+formatKp(it.kp)+"付近"):"",
-    side:it.side||"",
-    width:width===""?"":f2(width),
-    length:length===""?"":f2(length),
-    area:f2(area),
-    shape,
-    note,
-    raw:it
-  };
-}
-
-function buildRows(){
-  if(!sourceData){outputRows=[];shapeRows=[];return}
-  let list=(sourceData.items||[]).slice();
-  if(document.getElementById("onlyCurrentDate").checked){
-    const d=sourceData.date||"";
-    list=list.filter(it=>!it.date||it.date===d);
-  }
-  const route=sourceData.route||list[0]?.route||"";
-  const useDitto=document.getElementById("dittoRoute").checked;
-  outputRows=list.map((it,i)=>itemToExcel(it,i,(useDitto&&i>0)?"〃":(it.route||route)));
-  shapeRows=outputRows.filter(r=>r.shape==="trap"||r.shape==="tri").map(r=>{
-    const it=r.raw;
-    if(r.shape==="trap"){
-      return {no:r.no,kp:r.kp,shape:"台形",length:f2(it.w),width1:f2(it.l1),width2:f2(it.l2),area:r.area};
-    }
-    return {no:r.no,kp:r.kp,shape:"三角形",length:f2(it.l1),width1:f2(it.w),width2:"0.00",area:r.area};
-  });
-}
-
-function renderAll(){
-  buildRows();
-  const body=document.getElementById("mainBody");
-  body.innerHTML=outputRows.length?outputRows.map(r=>
-    `<tr><td>${esc(r.no)}</td><td>${esc(r.route)}</td><td>${esc(r.kp)}</td><td>${esc(r.side)}</td><td class="right">${esc(r.width)}</td><td class="right">${esc(r.length)}</td><td class="right">${esc(r.area)}</td></tr>`
-  ).join(""):`<tr><td colspan="7">記録なし</td></tr>`;
-
-  const sb=document.getElementById("shapeBody");
-  sb.innerHTML=shapeRows.length?shapeRows.map(r=>
-    `<tr><td>${esc(r.no)}</td><td>${esc(r.kp)}</td><td>${esc(r.shape)}</td><td class="right">${esc(r.length)}</td><td class="right">${esc(r.width1)}</td><td class="right">${esc(r.width2)}</td><td class="right">${esc(r.area)}</td></tr>`
-  ).join(""):`<tr><td colspan="7">台形・三角形なし</td></tr>`;
-
-  const manual=outputRows.filter(r=>r.shape==="manual").length;
-  document.getElementById("shapeNote").innerText=manual?`注意：直接入力が${manual}件あります。幅・延長は空欄です。`:"";
-  const total=outputRows.reduce((s,r)=>s+n(r.area),0);
-  document.getElementById("countView").innerText=outputRows.length+"件";
-  document.getElementById("totalView").innerText=f2(total)+"㎡";
-  document.getElementById("copyPreview").value=mainTsv();
-}
-
-function mainTsv(){
-  return outputRows.map(r=>[r.no,r.route,r.kp,r.side,r.width,r.length,r.area].join("\t")).join("\r\n");
-}
-
-async function copyText(text,label){
-  if(!text){alert("コピーするデータがありません");return}
-  try{
-    await navigator.clipboard.writeText(text);
-  }catch(e){
-    const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();
-  }
-  document.getElementById("copyPreview").value=text;
-  alert(label+"をコピーしました");
-}
-
-function copyMainTable(){copyText(mainTsv(),"Excel左表用7列")}
-function copyColumn(key){copyText(outputRows.map(r=>r[key]).join("\r\n"),key+"列")}
-function copyShapeTable(){
-  const t=shapeRows.map(r=>[r.no,r.kp,r.shape,r.length,r.width1,r.width2,r.area].join("\t")).join("\r\n");
-  copyText(t,"変形箇所")
-}
-
-function csvCell(v){const s=String(v??"");return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
-function downloadCsv(){
-  if(!outputRows.length){alert("保存するデータがありません");return}
-  const header=["No.","路線","位置","L/R","幅(m)","延長(m)","面積(㎡)"];
-  const lines=[header,...outputRows.map(r=>[r.no,r.route,r.kp,r.side,r.width,r.length,r.area])];
-  const csv="\uFEFF"+lines.map(row=>row.map(csvCell).join(",")).join("\r\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-  const date=sourceData?.date||"日付未設定";const route=sourceData?.route||"路線未設定";
-  a.download=`KP野帳_${date}_${route}_Excel用.csv`;
-  a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-}
-
-function loadYacho(){
-  const raw=localStorage.getItem(STORAGE_KEY);
-  const msg=document.getElementById("loadMessage");
-  if(!raw){
-    sourceData=null;outputRows=[];shapeRows=[];
-    msg.className="warn";msg.innerText="KP野帳の保存データが見つかりません。KP野帳で一度『保存』してから戻ってください。";
-    document.getElementById("dateView").innerText="--";
-    document.getElementById("routeView").innerText="--";
-    renderAll();return;
-  }
-  try{
-    sourceData=JSON.parse(raw);
-    document.getElementById("dateView").innerText=sourceData.date||"--";
-    document.getElementById("routeView").innerText=sourceData.route||"--";
-    msg.className="ok";msg.innerText="KP野帳の端末内データを読み込みました。外部送信はしていません。";
-    renderAll();
-  }catch(e){
-    sourceData=null;msg.className="warn";msg.innerText="保存データを読み取れませんでした："+e.message;renderAll();
-  }
-}
-
+const STORAGE_KEY='kp_yacho_v12';let sourceData=null,rows=[],shapeRows=[];
+function n(v){const x=parseFloat(v);return Number.isFinite(x)?x:0}function f2(v){return n(v).toFixed(2)}function esc(v){return String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
+function noText(it){return it.branch?String(it.no||'')+'-'+String(it.branch):String(it.no||'')}function kpText(v){const x=parseFloat(v);return Number.isFinite(x)?'KP'+x.toFixed(2)+'付近':''}
+function normalizeOld(it){if(it.shape)return it;const f=String(it.formula||''),a=f.match(/[0-9]+(?:\.[0-9]+)?/g)||[];if(f.includes('÷ 2')&&f.includes('+')){it.shape='trap';it.w=it.w||a[0];it.l1=it.l1||a[1];it.l2=it.l2||a[2]}else if(f.includes('÷ 2')){it.shape='tri';it.w=it.w||a[0];it.l1=it.l1||a[1]}else if(f.includes('×')){it.shape='rect';it.w=it.w||a[0];it.l1=it.l1||a[1]}else it.shape='manual';return it}
+function build(){const list=(sourceData?.items||[]).filter(it=>!sourceData.date||!it.date||it.date===sourceData.date).map(normalizeOld);const ditto=document.getElementById('dittoRoute').checked,daily=document.getElementById('dailyNo').checked;rows=list.map((it,i)=>{const s=it.shape||'manual',w=n(it.w),l1=n(it.l1),l2=n(it.l2);let width='',length='';if(s==='rect'){width=f2(w);length=f2(l1)}else if(s==='trap'){width=f2((l1+l2)/2);length=f2(w)}else if(s==='tri'){width=f2(w/2);length=f2(l1)}return{no:daily?String(i+1):noText(it),route:ditto&&i>0?'〃':(it.route||sourceData.route||''),kp:kpText(it.kp),side:it.side||'',width,length,area:f2(it.area),shape:s,raw:it}});shapeRows=rows.filter(r=>r.shape==='trap'||r.shape==='tri').map(r=>{const it=r.raw;return r.shape==='trap'?{no:r.no,kp:r.kp,shape:'台形',length:f2(it.w),w1:f2(it.l1),w2:f2(it.l2),area:r.area}:{no:r.no,kp:r.kp,shape:'三角形',length:f2(it.l1),w1:f2(it.w),w2:'0.00',area:r.area}})}
+function renderAll(){build();document.getElementById('mainBody').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.no)}</td><td>${esc(r.route)}</td><td>${esc(r.kp)}</td><td>${esc(r.side)}</td><td class="right">${esc(r.width)}</td><td class="right">${esc(r.length)}</td><td class="right">${esc(r.area)}</td></tr>`).join(''):'<tr><td colspan="7">記録なし</td></tr>';document.getElementById('shapeBody').innerHTML=shapeRows.length?shapeRows.map(r=>`<tr><td>${esc(r.no)}</td><td>${esc(r.kp)}</td><td>${esc(r.shape)}</td><td class="right">${esc(r.length)}</td><td class="right">${esc(r.w1)}</td><td class="right">${esc(r.w2)}</td><td class="right">${esc(r.area)}</td></tr>`).join(''):'<tr><td colspan="7">台形・三角形なし</td></tr>';document.getElementById('countView').innerText=rows.length+'件';document.getElementById('totalView').innerText=f2(rows.reduce((s,r)=>s+n(r.area),0))+'㎡';document.getElementById('copyPreview').value=''}
+async function copyText(text,label){if(!text){alert('コピーするデータがありません');return}try{await navigator.clipboard.writeText(text)}catch(e){const t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}document.getElementById('copyPreview').value=text;alert(label+'をコピーしました')}
+function copyColumn(key,label){copyText(rows.map(r=>r[key]).join('\r\n'),label)}function copyInputTable(){copyText(rows.map(r=>[r.no,r.route,r.kp,r.side,r.width,r.length].join('\t')).join('\r\n'),'入力値6列')}
+function copyShapeTable(){copyText(shapeRows.map(r=>[r.no,r.kp,r.shape,r.length,r.w1,r.w2].join('\t')).join('\r\n'),'変形箇所')}
+function loadYacho(){const raw=localStorage.getItem(STORAGE_KEY);if(!raw){sourceData=null;rows=[];shapeRows=[];document.getElementById('loadMessage').innerText='保存データがありません。先にKP野帳で保存してください。';renderAll();return}try{sourceData=JSON.parse(raw);document.getElementById('dateView').innerText=sourceData.date||'未設定';document.getElementById('routeView').innerText=sourceData.route||'未設定';document.getElementById('loadMessage').innerText='KP野帳の保存データを読み込みました。';renderAll()}catch(e){document.getElementById('loadMessage').innerText='読込失敗：'+e.message}}
 loadYacho();
 </script>
-</body>
-</html>
+</body></html>
