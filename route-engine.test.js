@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('assert');
+const e=require('./route-engine.js');
+const approx=(a,b,t,m)=>assert.ok(Math.abs(a-b)<=t,`${m}: actual=${a}, expected=${b}`);
+const legacy={id:'LEGACY',shortName:'LEG',points:[{kp:5.0,lat:35,lon:135,addr:'A'},{kp:5.1,lat:35,lon:135.001,addr:'B'},{kp:5.2,lat:35,lon:135.002,addr:'C'}]};
+let r=e.nearestOnRoute(35,135.001,legacy);approx(r.kp,5.1,.0005,'legacy points KP');assert.strictEqual(r.shortName,'LEG');assert.ok(r.distM<1);
+const calibrated={id:'CAL',polyline:[{lat:35,lon:135},{lat:35,lon:135.001},{lat:35,lon:135.002}],anchors:[{kp:10,lat:35,lon:135},{kp:10.4,lat:35,lon:135.002}]};
+r=e.nearestOnRoute(35,135.001,calibrated);approx(r.kp,10.2,.002,'two-anchor calibration');assert.strictEqual(r.extrapolated,false);
+const multi={id:'MULTI',polyline:[{lat:35,lon:135},{lat:35,lon:135.001},{lat:35,lon:135.002}],anchors:[{kp:0,lat:35,lon:135},{kp:.05,lat:35,lon:135.001},{kp:.20,lat:35,lon:135.002}]};
+r=e.nearestOnRoute(35,135.0015,multi);approx(r.kp,.125,.002,'multi-anchor correction');
+const far={id:'FAR',polyline:[{lat:35.01,lon:135},{lat:35.01,lon:135.002}],anchors:[{kp:20,lat:35.01,lon:135},{kp:20.2,lat:35.01,lon:135.002}]};
+r=e.findNearestRoute(35,135.001,[calibrated,far],'auto');assert.strictEqual(r.routeId,'CAL');
+r=e.findNearestRoute(35,135.001,[calibrated,far],'FAR');assert.strictEqual(r.routeId,'FAR');assert.ok(r.distM>500);
+const extra={id:'EXTRA',polyline:[{lat:35,lon:135},{lat:35,lon:135.001},{lat:35,lon:135.002},{lat:35,lon:135.003}],anchors:[{kp:1,lat:35,lon:135.001},{kp:1.1,lat:35,lon:135.002}]};
+r=e.nearestOnRoute(35,135.0002,extra);assert.strictEqual(r.extrapolated,true);
+assert.throws(()=>e.normalizeRoute({id:'BAD',polyline:[{lat:35,lon:135},{lat:35,lon:135.001}],anchors:[{kp:0,lat:35,lon:135}]}),/at least 2 distinct KP anchors/);
+console.log('route-engine tests: 7/7 passed');
