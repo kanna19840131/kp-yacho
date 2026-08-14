@@ -18,3 +18,11 @@ jobs:
         run: node official-route-probe.js
       - name: Run Route 5 official-data KML pilot
         run: node official-route-pilot.test.js
+      - name: Probe National Land Numerical Information road centerline GeoJSON
+        shell: bash
+        run: |
+          set -euxo pipefail
+          URL="https://nlftp.mlit.go.jp/ksj/gml/data/N13/N13-24/N13-24_6440_GEOJSON.zip"
+          curl -fL --retry 2 "$URL" -o /tmp/n13.zip
+          ls -lh /tmp/n13.zip
+          unzip -l /tmp/n13.zip | head -40
