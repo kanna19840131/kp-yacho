@@ -124,7 +124,22 @@
     return{
       schema:'kp-yacho-route-package/v1',
       route:{id:parsed.definition.shortName,label:parsed.definition.label,shortName:parsed.definition.shortName,points},
-      source:{provider:'MLIT road reference point system',kind:'network-100m-csv',route:parsed.definition.route,office:parsed.definition.office,currentOldNew:parsed.definition.currentOldNew,supplement:parsed.definition.supplement,retrievedAt:new Date().toISOString()},
+      source:{
+        provider:'MLIT road reference point system',
+        system:'道路基準点案内システム',
+        kind:'official-network-100m-csv',
+        referenceClass:'road-network-derived',
+        positioningBasis:'DRM road geometry',
+        fieldMarkerEquivalent:false,
+        fieldVerified:false,
+        route:parsed.definition.route,
+        office:parsed.definition.office,
+        currentOldNew:parsed.definition.currentOldNew,
+        supplement:parsed.definition.supplement,
+        retrievedAt:new Date().toISOString(),
+        qualityGate:'strict-v1',
+        notes:'Network-derived road reference data. Do not label as surveyed physical KP or field-verified KP without separate validation.'
+      },
       audit
     };
   }
@@ -132,7 +147,7 @@
     if(typeof fetchImpl!=='function')throw new Error('fetch is unavailable');
     const d=normalizeDefinition(def);
     const q=new URLSearchParams({type:'3',mode:'3',jimu1:'',jimu2:'',rosen:d.route,hm2_a:stationText(d.startKp),hm3_a:stationText(d.endKp)}).toString();
-    const headers={'user-agent':'kp-yacho-route-adapter/0.1','referer':base};
+    const headers={'user-agent':'kp-yacho-route-adapter/0.2','referer':base};
     const pre=await fetchImpl(base+`precsv.php?${q}`,{headers});
     if(!pre.ok)throw new Error(`precsv HTTP ${pre.status}`);
     const preText=await pre.text();if(!/ok\s*=\s*["']?ok/i.test(preText))throw new Error('precsv did not return ok');
