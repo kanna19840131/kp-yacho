@@ -13,6 +13,12 @@ const clean=csv([
 ]);
 let parsed=a.parseOfficialCsv(clean,def),audit=a.auditRows(parsed.rows,def);assert.strictEqual(audit.strictReady,true);assert.strictEqual(audit.expectedCount,3);assert.strictEqual(audit.uniqueStationCount,3);
 let pkg=a.makePackage(parsed);assert.strictEqual(pkg.route.points.length,3);assert.strictEqual(pkg.route.points[1].kp,1.1);assert.strictEqual(pkg.schema,'kp-yacho-route-package/v1');
+assert.strictEqual(pkg.source.kind,'official-network-100m-csv');
+assert.strictEqual(pkg.source.referenceClass,'road-network-derived');
+assert.strictEqual(pkg.source.positioningBasis,'DRM road geometry');
+assert.strictEqual(pkg.source.fieldMarkerEquivalent,false);
+assert.strictEqual(pkg.source.fieldVerified,false);
+assert.strictEqual(pkg.source.qualityGate,'strict-v1');
 
 const identicalDup=clean+'\n北海道開発局,小樽開発建設部,一般国道（直轄）,0005,現道,0,1.1,43,0,3.2,140,0,1.2';
 parsed=a.parseOfficialCsv(identicalDup,def);audit=a.auditRows(parsed.rows,def);assert.strictEqual(audit.strictReady,true);assert.strictEqual(audit.collapsibleDuplicates.length,1);pkg=a.makePackage(parsed);assert.strictEqual(pkg.route.points.length,3);
