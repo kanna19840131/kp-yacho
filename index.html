@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KP野帳 v3.9</title>
+<title>KP野帳 v3.9.1</title>
 <style>
 :root{
   --bg:#070707; --card:#14161a; --text:#f5f5f5; --muted:#a8a8a8;
@@ -67,7 +67,7 @@ textarea{min-height:160px;font-size:14px}
 </head>
 <body>
 
-<h1>KP野帳 v3.9</h1>
+<h1>KP野帳 v3.9.1</h1>
 
 <div class="card">
   <h2>現在KP</h2>
@@ -264,6 +264,10 @@ let items=[];
 let editIndex=null;
 let watchId=null;
 let latestGpsResult=null;
+// GPSが登録路線から離れすぎている時は、最寄り路線を「正解」として採用しない。
+// 30m超は注意、200m超は対象路線外として自動KPを止める。閾値は実地データで後から調整する。
+const ROUTE_WARN_DISTANCE_M=30;
+const ROUTE_MAX_DISTANCE_M=200;
 
 function init(){
   document.getElementById("date").valueAsDate=new Date();
@@ -384,9 +388,29 @@ function onGpsSuccess(pos){
   }
 
   if(res){
-    latestGpsResult=res;
     const sroute=shortRouteName(res.route);
     const distM=Math.round(res.dist);
+
+    // 「最寄り」は「その路線上にいる」という意味ではない。
+    // 登録路線から200mを超えたら自動KPを採用せず、手動入力だけを残す。
+    if(distM>ROUTE_MAX_DISTANCE_M){
+      latestGpsResult=null;
+      document.getElementById("currentKp").innerText="対象路線外";
+      document.getElementById("currentKpInput").value="";
+      document.getElementById("gpsInfo").innerText="登録路線まで "+distM+"m / GPS精度 "+acc+"m / "+new Date().toLocaleTimeString();
+      document.getElementById("nearestInfo").innerText="最寄り登録路線："+sroute+" / 約"+distM+"m";
+      document.getElementById("nearestAddr").innerText="最寄りKP住所：--";
+      document.getElementById("gpsWarn").style.display="block";
+      document.getElementById("gpsWarn").innerText="対象路線外：登録路線から "+distM+"m 離れています。KPは自動入力しません。";
+      const now=Date.now();
+      if(!window.lastReverseAt || now-window.lastReverseAt>30000){
+        window.lastReverseAt=now;
+        reverseGeocode(lat,lon,"currentAddr");
+      }
+      return;
+    }
+
+    latestGpsResult=res;
     const kpText=sroute+" KP"+formatKP(res.kp);
 
     document.getElementById("currentKp").innerText=kpText;
@@ -405,7 +429,7 @@ function onGpsSuccess(pos){
       reverseGeocode(lat,lon,"currentAddr");
     }
 
-    if(distM>30){
+    if(distM>ROUTE_WARN_DISTANCE_M){
       document.getElementById("gpsWarn").style.display="block";
       document.getElementById("gpsWarn").innerText="注意：路線まで "+distM+"m。路線外またはGPS誤差の可能性あり。";
     }else{
