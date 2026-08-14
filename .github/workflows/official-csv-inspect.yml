@@ -16,3 +16,5 @@ jobs:
           node-version: '24'
       - name: Decode official CSV identity fields
         run: node official-csv-inspect.js
+      - name: Measure official 100m station alignment
+        run: node official-100m-station-alignment.js
