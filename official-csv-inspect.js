@@ -19,11 +19,13 @@ function parseCsvLine(line){
   }
   out.push(cur);return out;
 }
-async function fetchBytes(rel){
-  const res=await fetch(BASE+rel,{headers:{'user-agent':'kp-yacho-route-pilot/0.7','referer':BASE}});
+function cookiePair(setCookie){return String(setCookie||'').split(';')[0].trim();}
+async function fetchBytes(rel,cookie=''){
+  const headers={'user-agent':'kp-yacho-route-pilot/1.0','referer':BASE};if(cookie)headers.cookie=cookie;
+  const res=await fetch(BASE+rel,{headers});
   const buf=Buffer.from(await res.arrayBuffer());
   if(!res.ok)throw new Error(`${rel}: HTTP ${res.status}`);
-  return{buf,type:res.headers.get('content-type')};
+  return{buf,type:res.headers.get('content-type'),setCookie:res.headers.get('set-cookie')};
 }
 function decodeCp932(buf){
   for(const label of ['shift_jis','windows-31j']){
@@ -36,9 +38,9 @@ function uniq(rows,index){return [...new Set(rows.map(r=>r[index]).filter(v=>v!=
 (async()=>{
   for(const t of tests){
     const q=`type=3&mode=3&jimu1=&jimu2=&rosen=${t.route}&hm2_a=${t.start.toFixed(1)}&hm3_a=${t.end.toFixed(1)}`;
-    const pre=await fetchBytes(`precsv.php?${q}`);
-    console.log(`\n===== ${t.name} preCSV =====`);console.log(pre.buf.toString('utf8'));
-    const csv=await fetchBytes(`csv.php?${q}`),text=decodeCp932(csv.buf).replace(/^\uFEFF/,'');
+    const pre=await fetchBytes(`precsv.php?${q}`),cookie=cookiePair(pre.setCookie);
+    console.log(`\n===== ${t.name} preCSV =====`);console.log(pre.buf.toString('utf8'),'cookieSet',!!cookie);
+    const csv=await fetchBytes(`csv.php?${q}`,cookie),text=decodeCp932(csv.buf).replace(/^\uFEFF/,'');
     const lines=text.split(/\r?\n/).filter(Boolean),rows=lines.map(parseCsvLine),header=rows[0],data=rows.slice(1);
     console.log(`===== ${t.name} CSV =====`);
     console.log('contentType',csv.type,'bytes',csv.buf.length,'rows',data.length);
