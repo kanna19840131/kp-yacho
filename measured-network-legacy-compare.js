@@ -20,14 +20,14 @@ function hav(a,b){const R=6371000,p1=a.lat*Math.PI/180,p2=b.lat*Math.PI/180,dp=(
 function stats(vals){if(!vals.length)return{count:0};const s=vals.slice().sort((a,b)=>a-b),q=p=>s[Math.min(s.length-1,Math.floor((s.length-1)*p))];return{count:vals.length,mean:+(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(3),median:+q(.5).toFixed(3),p95:+q(.95).toFixed(3),max:+Math.max(...vals).toFixed(3)};}
 async function fetchNetwork(route,start,end){
   const q=`type=3&mode=3&jimu1=&jimu2=&rosen=${route}&hm2_a=${start.toFixed(1)}&hm3_a=${end.toFixed(1)}`;
-  let r=await fetch(BASE+`precsv.php?${q}`,{headers:{'user-agent':'kp-yacho-measured-compare/0.1','referer':BASE}});await r.arrayBuffer();if(!r.ok)throw new Error(`precsv ${r.status}`);
-  r=await fetch(BASE+`csv.php?${q}`,{headers:{'user-agent':'kp-yacho-measured-compare/0.1','referer':BASE}});if(!r.ok)throw new Error(`csv ${r.status}`);
+  let r=await fetch(BASE+`precsv.php?${q}`,{headers:{'user-agent':'kp-yacho-measured-compare/0.2','referer':BASE}});await r.arrayBuffer();if(!r.ok)throw new Error(`precsv ${r.status}`);
+  r=await fetch(BASE+`csv.php?${q}`,{headers:{'user-agent':'kp-yacho-measured-compare/0.2','referer':BASE}});if(!r.ok)throw new Error(`csv ${r.status}`);
   const text=new TextDecoder('shift_jis').decode(Buffer.from(await r.arrayBuffer())).replace(/^\uFEFF/,'');
   return text.split(/\r?\n/).filter(Boolean).map(parseCsvLine).slice(1).map(x=>({kp:Number(x[6]),lat:dms(x[7],x[8],x[9]),lon:dms(x[10],x[11],x[12])})).filter(x=>Number.isFinite(x.kp));
 }
 async function fetchTile(x,y){
   const u=`https://www.road-refpoint.go.jp/kijunten/xyz/geojson/${Z}/${x}/${y}.geojson`;
-  const r=await fetch(u,{headers:{'user-agent':'kp-yacho-measured-compare/0.1'}});if(!r.ok)return[];return (await r.json()).features||[];
+  const r=await fetch(u,{headers:{'user-agent':'kp-yacho-measured-compare/0.2'}});if(!r.ok)return[];return (await r.json()).features||[];
 }
 async function measuredAround(route,networkRows){
   const tileKeys=new Set();
@@ -49,10 +49,25 @@ async function measuredAround(route,networkRows){
     for(const m of measured.filter(x=>x.kp>=t.start&&x.kp<=t.end)){
       const nc=network.filter(x=>Math.abs(x.kp-m.kp)<1e-9).map(n=>({n,d:hav(m,n)})).sort((a,b)=>a.d-b.d);
       const lr=engine.nearestOnRoute(m.lat,m.lon,legacy);
-      rows.push({kp:m.kp,revision:m.updateno_str,date:m.fdate_str,networkCandidateCount:nc.length,measuredToNearestNetworkM:nc.length?+nc[0].d.toFixed(2):null,legacyPredictedKp:lr?+lr.kp.toFixed(5):null,legacyKpErrorM:lr?+Math.abs(lr.kp-m.kp)*1000.toFixed?.(2):null,legacyRouteOffsetM:lr?+lr.distM.toFixed(2):null});
+      rows.push({
+        kp:m.kp,
+        revision:m.updateno_str,
+        date:m.fdate_str,
+        networkCandidateCount:nc.length,
+        measuredToNearestNetworkM:nc.length?+nc[0].d.toFixed(2):null,
+        legacyPredictedKp:lr?+lr.kp.toFixed(5):null,
+        legacyKpErrorM:lr?+Math.abs(lr.kp-m.kp)*1000:null,
+        legacyRouteOffsetM:lr?+lr.distM.toFixed(2):null
+      });
     }
-    // fix numeric formatting independently of optional chaining arithmetic quirks
-    for(const r of rows){if(r.legacyPredictedKp!==null)r.legacyKpErrorM=+Math.abs(r.legacyPredictedKp-r.kp)*1000; if(r.legacyKpErrorM!==null)r.legacyKpErrorM=+r.legacyKpErrorM.toFixed(2);}
-    console.log(JSON.stringify({route:t.key,measuredCount:rows.length,rows,measuredToNetworkM:stats(rows.map(r=>r.measuredToNearestNetworkM).filter(Number.isFinite)),measuredPointLegacyKpErrorM:stats(rows.map(r=>r.legacyKpErrorM).filter(Number.isFinite)),measuredPointLegacyLateralOffsetM:stats(rows.map(r=>r.legacyRouteOffsetM).filter(Number.isFinite))},null,2));
+    for(const r of rows){if(r.legacyKpErrorM!==null)r.legacyKpErrorM=+r.legacyKpErrorM.toFixed(2);}
+    console.log(JSON.stringify({
+      route:t.key,
+      measuredCount:rows.length,
+      rows,
+      measuredToNetworkM:stats(rows.map(r=>r.measuredToNearestNetworkM).filter(Number.isFinite)),
+      measuredPointLegacyKpErrorM:stats(rows.map(r=>r.legacyKpErrorM).filter(Number.isFinite)),
+      measuredPointLegacyLateralOffsetM:stats(rows.map(r=>r.legacyRouteOffsetM).filter(Number.isFinite))
+    },null,2));
   }
 })().catch(e=>{console.error(e);process.exit(1);});
