@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KP校正ポイント採取 v0.1</title>
+<style>
+:root{--bg:#070707;--card:#14161a;--text:#f5f5f5;--muted:#a8a8a8;--blue:#79aaff;--green:#25c05a;--red:#ff5a5f;--gray:#555b63;--line:#333842;--warn:#f6c343}
+*{box-sizing:border-box}body{margin:0;padding:14px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}h1{font-size:28px;margin:10px 0 18px}h2{font-size:20px;color:var(--blue);border-bottom:2px solid var(--blue);padding-bottom:8px;margin:0 0 12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}.big{font-size:30px;font-weight:900;text-align:center;margin:10px 0}.sub{font-size:14px;color:var(--muted);line-height:1.55}.row{display:flex;gap:8px}.row>div{flex:1}label{display:block;color:var(--muted);font-size:14px;margin-top:10px}input,select,textarea{width:100%;padding:12px;margin-top:5px;border-radius:10px;border:1px solid #555;background:#2a2d32;color:var(--text);font-size:17px}textarea{min-height:130px;font-size:13px}button{border:0;border-radius:10px;padding:12px 14px;font-size:16px;font-weight:700;color:#fff;background:#0d6efd;margin-top:8px}.green{background:var(--green);color:#031407}.gray{background:var(--gray)}.red{background:var(--red)}.warn{background:#3a3008;border:1px solid #7e6a12;color:#ffe28a;padding:10px;border-radius:10px;margin-top:8px}.ok{background:#11391f;border:1px solid #256d39;color:#8cffaa;padding:10px;border-radius:10px;margin-top:8px}.item{background:#0d0f12;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px}.item b{color:var(--blue);font-size:18px}.item .meta{font-size:13px;color:var(--muted);line-height:1.5}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar button{flex:1;min-width:120px}.credit{text-align:center;color:#777;font-size:12px;margin:22px 0 6px}
+</style>
+</head>
+<body>
+<h1>KP校正ポイント採取 v0.1</h1>
+
+<div class="card">
+  <h2>目的</h2>
+  <div class="sub">現地でKPが確実に分かる地点のGPS座標を採取するための診断ツールです。採取した値はKP野帳本体へ自動適用しません。</div>
+  <div class="warn">位置情報は端末内にだけ保存します。JSON/CSVをコピーした時だけ端末外へ持ち出されます。補正検証は「2点で補正＋1点を答え合わせ」にできる3点以上を推奨。</div>
+</div>
+
+<div class="card">
+  <h2>GPS</h2>
+  <div class="big" id="gpsMain">GPS待機中</div>
+  <div class="sub" id="gpsDetail">GPS開始を押してください。</div>
+  <div id="gpsQuality"></div>
+  <div class="row">
+    <button onclick="startGps()">GPS開始</button>
+    <button class="gray" onclick="stopGps()">GPS停止</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>既知KPを登録</h2>
+  <div class="row">
+    <div><label>路線</label><input id="route" value="R230" placeholder="例 R230"></div>
+    <div><label>既知KP</label><input id="kp" type="number" step="0.001" placeholder="例 15.840"></div>
+  </div>
+  <label>KPの根拠</label>
+  <select id="source">
+    <option value="physical-marker">現地点標</option>
+    <option value="contract-document">契約図書・図面</option>
+    <option value="shared-reference">監督員・社内共有値</option>
+    <option value="other">その他</option>
+  </select>
+  <label>メモ</label><input id="note" placeholder="例 15.840地点標の横、進行方向側">
+  <button class="green" onclick="saveCapture()">この地点を校正ポイントとして保存</button>
+  <div class="sub">GPS精度20m以内を良好、20〜50mを注意、50m超は保存しません。</div>
+</div>
+
+<div class="card">
+  <h2>採取状況</h2>
+  <div id="summary" class="sub">0点</div>
+  <div id="list"></div>
+</div>
+
+<div class="card">
+  <h2>書き出し</h2>
+  <div class="toolbar">
+    <button onclick="showExport('json')">JSON表示</button>
+    <button onclick="showExport('csv')">CSV表示</button>
+    <button class="gray" onclick="copyExport()">表示内容をコピー</button>
+  </div>
+  <textarea id="exportBox" readonly></textarea>
+  <button class="red" onclick="clearAll()">採取データを全削除</button>
+</div>
+
+<div class="credit">KP野帳 Field Calibration Capture / local-only diagnostic</div>
+
+<script src="calibration-capture-core.js"></script>
+<script>
+'use strict';
+const CORE=window.KPCalibrationCaptureCore;
+const STORAGE_KEY='kp_yacho_calibration_captures_v1';
+let captures=[];
+let watchId=null;
+let currentGps=null;
+let exportMode='json';
+
+function el(id){return document.getElementById(id)}
+function sourceLabel(v){return({
+  'physical-marker':'現地点標','contract-document':'契約図書・図面','shared-reference':'監督員・社内共有値','other':'その他'
+})[v]||v}
+function load(){
+  try{const raw=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');captures=Array.isArray(raw)?raw:[]}catch(e){captures=[]}
+  render();showExport('json');
+}
+function persist(){localStorage.setItem(STORAGE_KEY,JSON.stringify(captures))}
+
+function startGps(){
+  if(!navigator.geolocation){alert('この端末はGPSに対応していません。');return}
+  if(watchId!==null)return;
+  el('gpsMain').innerText='GPS取得中...';
+  watchId=navigator.geolocation.watchPosition(onGps,onGpsError,{enableHighAccuracy:true,maximumAge:0,timeout:10000});
+}
+function stopGps(){
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  el('gpsDetail').innerText='GPS停止中';
+}
+function onGps(pos){
+  currentGps={lat:pos.coords.latitude,lon:pos.coords.longitude,accuracyM:Number(pos.coords.accuracy||0),capturedAt:new Date().toISOString()};
+  const q=CORE.qualityForAccuracy(currentGps.accuracyM);
+  el('gpsMain').innerText=currentGps.lat.toFixed(6)+', '+currentGps.lon.toFixed(6);
+  el('gpsDetail').innerText='GPS精度 '+Math.round(currentGps.accuracyM)+'m / '+new Date().toLocaleTimeString();
+  const box=el('gpsQuality');
+  if(q.status==='good'){box.className='ok';box.innerText='GPS精度：良好。校正ポイント採取に使用できます。'}
+  else if(q.status==='warning'){box.className='warn';box.innerText='GPS精度：注意。保存できますが、可能なら20m以内まで待ってください。'}
+  else{box.className='warn';box.innerText='GPS精度不足。50m以内になるまで保存しません。'}
+}
+function onGpsError(err){el('gpsQuality').className='warn';el('gpsQuality').innerText='GPSエラー：'+err.message}
+
+function saveCapture(){
+  if(!currentGps){alert('先にGPS開始してください。');return}
+  try{
+    const c=CORE.createCapture({
+      route:el('route').value,
+      kp:el('kp').value,
+      lat:currentGps.lat,lon:currentGps.lon,accuracyM:currentGps.accuracyM,
+      source:el('source').value,note:el('note').value,capturedAt:new Date().toISOString()
+    });
+    captures.push(c);persist();
+    el('kp').value='';el('note').value='';
+    render();showExport(exportMode);
+  }catch(e){alert(e.message)}
+}
+function removeCapture(id){captures=captures.filter(x=>x.id!==id);persist();render();showExport(exportMode)}
+function clearAll(){if(!confirm('採取した校正ポイントをすべて削除しますか？'))return;captures=[];persist();render();showExport(exportMode)}
+
+function render(){
+  const audit=CORE.auditCaptures(captures);
+  if(!audit.routes.length){el('summary').innerText='0点。既知KP地点でGPSを採取してください。';el('list').innerHTML='';return}
+  el('summary').innerHTML=audit.routes.map(r=>{
+    const spacing=r.minSpacingM===null?'--':Math.round(r.minSpacingM)+'m';
+    const test=r.recommendedForTwoPlusOneTest?'2点補正＋1点検証が可能':'3点未満または精度不足';
+    return `<b>${escapeHtml(r.route)}</b>：${r.count}点 / 良好${r.goodAccuracyCount}点 / 最小間隔${spacing} / ${test}`;
+  }).join('<br>');
+  el('list').innerHTML=captures.slice().sort((a,b)=>String(b.capturedAt).localeCompare(String(a.capturedAt))).map(c=>{
+    const q=CORE.qualityForAccuracy(c.accuracyM);
+    return `<div class="item"><b>${escapeHtml(c.route)} KP${Number(c.kp).toFixed(3)}</b><div class="meta">${Number(c.lat).toFixed(6)}, ${Number(c.lon).toFixed(6)}<br>GPS精度 ${Math.round(c.accuracyM)}m（${q.label}） / ${escapeHtml(sourceLabel(c.source))}<br>${new Date(c.capturedAt).toLocaleString()}${c.note?'<br>'+escapeHtml(c.note):''}</div><button class="red" onclick="removeCapture('${escapeJs(c.id)}')">削除</button></div>`;
+  }).join('');
+}
+function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function escapeJs(v){return String(v??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+function showExport(mode){exportMode=mode;el('exportBox').value=mode==='csv'?CORE.toCsv(captures):CORE.toJson(captures)}
+async function copyExport(){
+  const text=el('exportBox').value;
+  if(!text){return}
+  try{await navigator.clipboard.writeText(text);alert('コピーしました。')}catch(e){el('exportBox').select();document.execCommand('copy');alert('コピーしました。')}
+}
+load();
+</script>
+</body>
+</html>
