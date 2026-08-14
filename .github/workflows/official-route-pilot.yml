@@ -28,3 +28,5 @@ jobs:
           ls -lh /tmp/n13.zip /tmp/n13.geojson
       - name: Inspect centerline candidates near Route 5 KP197-203
         run: node national-road-centerline-inspect.js /tmp/n13.geojson
+      - name: Build Route 5 centerline and measure KP interpolation
+        run: node national-road-centerline-pilot.js /tmp/n13.geojson
