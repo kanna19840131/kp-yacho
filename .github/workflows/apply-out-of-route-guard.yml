@@ -1,0 +1,75 @@
+name: apply-out-of-route-guard
+
+on:
+  push:
+    branches:
+      - fix/out-of-route-kp-guard
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/out-of-route-kp-guard
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch index.html
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          s=s.replace('<title>KP野帳 v3.9</title>','<title>KP野帳 v3.9.1</title>',1)
+          s=s.replace('<h1>KP野帳 v3.9</h1>','<h1>KP野帳 v3.9.1</h1>',1)
+
+          old='''let latestGpsResult=null;\n\nfunction init(){'''
+          new='''let latestGpsResult=null;\n// GPSが登録路線から離れすぎている時は、最寄り路線を「正解」として採用しない。\n// 30m超は注意、200m超は対象路線外として自動KPを止める。閾値は実地データで後から調整する。\nconst ROUTE_WARN_DISTANCE_M=30;\nconst ROUTE_MAX_DISTANCE_M=200;\n\nfunction init(){'''
+          if 'const ROUTE_MAX_DISTANCE_M=200;' not in s:
+              if old not in s: raise SystemExit('latestGpsResult insertion point not found')
+              s=s.replace(old,new,1)
+
+          old='''  if(res){\n    latestGpsResult=res;\n    const sroute=shortRouteName(res.route);\n    const distM=Math.round(res.dist);\n    const kpText=sroute+" KP"+formatKP(res.kp);'''
+          new='''  if(res){\n    const sroute=shortRouteName(res.route);\n    const distM=Math.round(res.dist);\n\n    // 「最寄り」は「その路線上にいる」という意味ではない。\n    // 登録路線から200mを超えたら自動KPを採用せず、手動入力だけを残す。\n    if(distM>ROUTE_MAX_DISTANCE_M){\n      latestGpsResult=null;\n      document.getElementById("currentKp").innerText="対象路線外";\n      document.getElementById("currentKpInput").value="";\n      document.getElementById("gpsInfo").innerText="登録路線まで "+distM+"m / GPS精度 "+acc+"m / "+new Date().toLocaleTimeString();\n      document.getElementById("nearestInfo").innerText="最寄り登録路線："+sroute+" / 約"+distM+"m";\n      document.getElementById("nearestAddr").innerText="最寄りKP住所：--";\n      document.getElementById("gpsWarn").style.display="block";\n      document.getElementById("gpsWarn").innerText="対象路線外：登録路線から "+distM+"m 離れています。KPは自動入力しません。";\n      const now=Date.now();\n      if(!window.lastReverseAt || now-window.lastReverseAt>30000){\n        window.lastReverseAt=now;\n        reverseGeocode(lat,lon,"currentAddr");\n      }\n      return;\n    }\n\n    latestGpsResult=res;\n    const kpText=sroute+" KP"+formatKP(res.kp);'''
+          if '対象路線外：登録路線から ' not in s:
+              if old not in s: raise SystemExit('onGpsSuccess insertion point not found')
+              s=s.replace(old,new,1)
+
+          s=s.replace('if(distM>30){','if(distM>ROUTE_WARN_DISTANCE_M){',1)
+
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Verify safety guard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          checks=[
+            'KP野帳 v3.9.1',
+            'const ROUTE_WARN_DISTANCE_M=30;',
+            'const ROUTE_MAX_DISTANCE_M=200;',
+            'if(distM>ROUTE_MAX_DISTANCE_M){',
+            '対象路線外：登録路線から ',
+            'if(distM>ROUTE_WARN_DISTANCE_M){'
+          ]
+          missing=[x for x in checks if x not in s]
+          if missing: raise SystemExit('missing guard markers: '+repr(missing))
+          if 'if(distM>30){' in s: raise SystemExit('old hard-coded warning threshold still present')
+          print('out-of-route guard verification: passed')
+          PY
+      - name: Commit patched index
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'index.html already patched'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Fail closed when GPS is outside registered routes'
+          git push origin HEAD:fix/out-of-route-kp-guard
