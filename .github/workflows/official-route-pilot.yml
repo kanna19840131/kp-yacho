@@ -16,3 +16,5 @@ jobs:
           node-version: '24'
       - name: Probe official road reference point tiles
         run: node official-route-probe.js
+      - name: Run Route 5 official-data KML pilot
+        run: node official-route-pilot.test.js
