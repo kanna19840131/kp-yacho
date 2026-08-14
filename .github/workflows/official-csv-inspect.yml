@@ -16,10 +16,14 @@ jobs:
           node-version: '24'
       - name: Syntax check official route adapter
         run: node --check official-route-adapter.js
+      - name: Syntax check route calibration
+        run: node --check route-calibration.js
       - name: Syntax check measured comparison
         run: node --check measured-network-legacy-compare.js
       - name: Unit test official route adapter
         run: node official-route-adapter.test.js
+      - name: Unit test field KP calibration
+        run: node route-calibration.test.js
       - name: Live audit official 100m route packages
         run: node official-route-adapter.network.test.js
       - name: Probe measured vs network dataset types
