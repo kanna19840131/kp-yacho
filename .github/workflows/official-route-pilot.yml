@@ -28,22 +28,5 @@ jobs:
           ls -lh /tmp/n13.zip /tmp/n13.geojson
       - name: Build Route 5 centerline and measure KP interpolation
         run: node national-road-centerline-pilot.js /tmp/n13.geojson
-      - name: Inspect official 100m endpoint parameters
-        shell: bash
-        run: |
-          set -euo pipefail
-          BASE='https://www.road-refpoint.go.jp/kijunten/'
-          curl -fsSL --retry 2 "$BASE" -o /tmp/roadref.html
-          curl -fsSL --retry 2 "${BASE}roadref.js" -o /tmp/roadref.js
-          echo '--- adminpath ---'
-          grep -Ein 'adminpath' /tmp/roadref.html /tmp/roadref.js | head -80 || true
-          echo '--- pinpoint function 900-1020 ---'
-          sed -n '900,1020p' /tmp/roadref.js
-          echo '--- range function 1250-1325 ---'
-          sed -n '1250,1325p' /tmp/roadref.js
-          echo '--- 100m mode switch 1510-1550 ---'
-          sed -n '1510,1550p' /tmp/roadref.js
-          echo '--- CSV range flow 1660-1815 ---'
-          sed -n '1660,1815p' /tmp/roadref.js
-          echo '--- select/input identifiers around point/range forms ---'
-          grep -Ein 'pinpoint_|name="(rosen|jimusho|chisei|gks|jg|hojo|hm|hm_dist|hm2_a|hm3_a)|id="(rosen|jimusho|chisei|gks|jg|hojo|hm|hm_dist|hm2_a|hm3_a)' /tmp/roadref.html | head -260 || true
+      - name: Probe official 100m Route 5 range and point endpoints
+        run: node official-100m-endpoint-probe.js
