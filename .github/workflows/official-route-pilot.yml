@@ -28,5 +28,7 @@ jobs:
           ls -lh /tmp/n13.zip /tmp/n13.geojson
       - name: Build Route 5 centerline and measure KP interpolation
         run: node national-road-centerline-pilot.js /tmp/n13.geojson
-      - name: Probe official 100m Route 5 range and point endpoints
+      - name: Probe official 100m Route 5 range and CSV endpoints
         run: node official-100m-endpoint-probe.js
+      - name: Compare official 100m data with current R230 R453 points
+        run: node official-100m-legacy-compare.js
