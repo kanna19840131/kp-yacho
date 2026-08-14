@@ -14,6 +14,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Syntax check official route adapter
+        run: node --check official-route-adapter.js
+      - name: Unit test official route adapter
+        run: node official-route-adapter.test.js
+      - name: Live audit official 100m route packages
+        run: node official-route-adapter.network.test.js
       - name: Decode official CSV identity fields
         run: node official-csv-inspect.js
       - name: Measure official 100m station alignment
