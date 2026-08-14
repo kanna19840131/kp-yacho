@@ -1,0 +1,59 @@
+name: finalize-v391-guard
+
+on:
+  push:
+    branches:
+      - fix/out-of-route-kp-guard
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/out-of-route-kp-guard
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Finalize version label and verify guard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('  KP野帳 v3.9<br>','  KP野帳 v3.9.1<br>',1)
+          required=[
+            '<title>KP野帳 v3.9.1</title>',
+            '<h1>KP野帳 v3.9.1</h1>',
+            'KP野帳 v3.9.1<br>',
+            'const ROUTE_WARN_DISTANCE_M=30;',
+            'const ROUTE_MAX_DISTANCE_M=200;',
+            'if(distM>ROUTE_MAX_DISTANCE_M){',
+            'latestGpsResult=null;',
+            'document.getElementById("currentKpInput").value="";',
+            '対象路線外：登録路線から ',
+            'if(distM>ROUTE_WARN_DISTANCE_M){'
+          ]
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('missing markers: '+repr(missing))
+          p.write_text(s,encoding='utf-8')
+
+          start=s.index('<script>')+len('<script>')
+          end=s.rindex('</script>')
+          Path('/tmp/index-inline.js').write_text(s[start:end],encoding='utf-8')
+          PY
+          node --check /tmp/index-inline.js
+      - name: Commit final index if needed
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'index.html already finalized'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Finalize v3.9.1 route guard labels'
+          git push origin HEAD:fix/out-of-route-kp-guard
