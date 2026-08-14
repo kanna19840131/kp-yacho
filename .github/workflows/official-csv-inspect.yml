@@ -20,6 +20,8 @@ jobs:
         run: node official-route-adapter.test.js
       - name: Live audit official 100m route packages
         run: node official-route-adapter.network.test.js
+      - name: Probe measured vs network dataset types
+        run: node official-reference-kind-probe.js
       - name: Decode official CSV identity fields
         run: node official-csv-inspect.js
       - name: Measure official 100m station alignment
