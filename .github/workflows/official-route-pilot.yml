@@ -30,3 +30,14 @@ jobs:
         run: node national-road-centerline-inspect.js /tmp/n13.geojson
       - name: Build Route 5 centerline and measure KP interpolation
         run: node national-road-centerline-pilot.js /tmp/n13.geojson
+      - name: Inspect official road-reference web page for 100m data endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 2 'https://www.road-refpoint.go.jp/kijunten/' -o /tmp/roadref.html
+          echo '--- scripts/forms ---'
+          grep -Eio '<script[^>]+src="[^"]+"|<form[^>]+>|action="[^"]+"' /tmp/roadref.html | head -120 || true
+          echo '--- endpoint-like strings near network/CSV/100m ---'
+          grep -Ein 'ajax|csv|network|hyaku|100m|100|post|php|xml|json|convert|search|coord' /tmp/roadref.html | head -220 || true
+          echo '--- referenced javascript files ---'
+          grep -Eio 'src="[^"]+\.js[^" ]*"' /tmp/roadref.html | sed 's/^src="//;s/"$//' | sort -u
