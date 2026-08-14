@@ -34,10 +34,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL --retry 2 'https://www.road-refpoint.go.jp/kijunten/' -o /tmp/roadref.html
+          BASE='https://www.road-refpoint.go.jp/kijunten/'
+          curl -fsSL --retry 2 "$BASE" -o /tmp/roadref.html
+          curl -fsSL --retry 2 "${BASE}roadref.js" -o /tmp/roadref.js
           echo '--- scripts/forms ---'
           grep -Eio '<script[^>]+src="[^"]+"|<form[^>]+>|action="[^"]+"' /tmp/roadref.html | head -120 || true
-          echo '--- endpoint-like strings near network/CSV/100m ---'
+          echo '--- HTML endpoint-like strings near network/CSV/100m ---'
           grep -Ein 'ajax|csv|network|hyaku|100m|100|post|php|xml|json|convert|search|coord' /tmp/roadref.html | head -220 || true
-          echo '--- referenced javascript files ---'
-          grep -Eio 'src="[^"]+\.js[^" ]*"' /tmp/roadref.html | sed 's/^src="//;s/"$//' | sort -u
+          echo '--- roadref.js endpoint/function strings ---'
+          grep -Ein 'ajax|csv|php|xml|json|network|100m|100|Search00|preoutCSV|convert|coord|url|\.php|\.cgi' /tmp/roadref.js | head -400 || true
+          echo '--- candidate relative endpoints ---'
+          grep -Eo "['\"][A-Za-z0-9_./?-]+\.(php|cgi|json|xml)(\?[^'\"]*)?['\"]" /tmp/roadref.js | sort -u | head -120 || true
