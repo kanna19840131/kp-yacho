@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/route-config-engine
+      - feature/field-calibration-capture
   pull_request:
     branches:
       - main
@@ -20,9 +21,22 @@ jobs:
         run: |
           node --check route-engine.js
           node --check kml-route-loader.js
+          node --check calibration-capture-core.js
       - name: Unit tests
         run: node route-engine.test.js
       - name: R230/R453 regression tests
         run: node route-regression.test.js
       - name: KML route loader tests
         run: node kml-route-loader.test.js
+      - name: Calibration capture core tests
+        run: node calibration-capture-core.test.js
+      - name: Calibration capture page inline JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('kp-calibration-capture.html').read_text(encoding='utf-8')
+          start=s.rindex('<script>')+len('<script>')
+          end=s.rindex('</script>')
+          Path('/tmp/kp-calibration-capture-inline.js').write_text(s[start:end],encoding='utf-8')
+          PY
+          node --check /tmp/kp-calibration-capture-inline.js
