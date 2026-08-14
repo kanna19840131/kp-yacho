@@ -7,6 +7,8 @@
   const R=6371000;
   const DEFAULT_LEGACY_MAX_KP_STEP=0.110001;
   const DEFAULT_DUPLICATE_DISTANCE_M=0.5;
+  const DEFAULT_ROUTE_WARN_DISTANCE_M=30;
+  const DEFAULT_ROUTE_MAX_DISTANCE_M=200;
   const finite=v=>Number.isFinite(Number(v));
   function haversine(a,b){const p=Math.PI/180,lat1=Number(a.lat)*p,lat2=Number(b.lat)*p,dlat=(Number(b.lat)-Number(a.lat))*p,dlon=(Number(b.lon)-Number(a.lon))*p;const h=Math.sin(dlat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dlon/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));}
   function xy(lat,lon,lat0){const p=Math.PI/180;return{x:R*Number(lon)*p*Math.cos(Number(lat0)*p),y:R*Number(lat)*p};}
@@ -34,6 +36,20 @@
   function nearestOnRoute(lat,lon,config){const route=normalize(config);let best=null;for(const section of route.sections){const p=project(lat,lon,section.polyline);if(!p)continue;const k=kpAt(p.alongM,section.anchors);if(!k)continue;const a=section.polyline[p.segmentIndex],b=section.polyline[p.segmentIndex+1],result={routeId:route.id,routeLabel:route.label,shortName:route.shortName,sectionId:section.id,kp:k.kp,distM:p.distM,alongM:p.alongM,projectedLat:p.projectedLat,projectedLon:p.projectedLon,segmentIndex:p.segmentIndex,t:p.t,extrapolated:k.extrapolated,leftAnchor:k.leftAnchor,rightAnchor:k.rightAnchor,addr:p.t<0.5?(a.addr||''):(b.addr||''),metadata:route.metadata};if(!best||result.distM<best.distM)best=result;}return best;}
   function normalizeRoutes(routes){return(Array.isArray(routes)?routes:Object.values(routes||{})).map(normalize);}
   function findNearestRoute(lat,lon,routes,mode='auto'){const list=normalizeRoutes(routes);if(!list.length)return null;if(mode!=='auto'){const fixed=list.find(r=>r.id===mode||r.shortName===mode||r.label===mode);return fixed?nearestOnRoute(lat,lon,fixed):null;}let best=null;for(const route of list){const r=nearestOnRoute(lat,lon,route);if(r&&(!best||r.distM<best.distM))best=r;}return best;}
+  function assessRouteMatch(result,opts={}){
+    const warnDistanceM=finite(opts.warnDistanceM)?Number(opts.warnDistanceM):DEFAULT_ROUTE_WARN_DISTANCE_M;
+    const maxDistanceM=finite(opts.maxDistanceM)?Number(opts.maxDistanceM):DEFAULT_ROUTE_MAX_DISTANCE_M;
+    if(warnDistanceM<0||maxDistanceM<=0||maxDistanceM<warnDistanceM)throw new Error('invalid route distance thresholds');
+    if(!result||!finite(result.distM))return{status:'unavailable',accepted:false,warning:false,outside:false,distM:null,warnDistanceM,maxDistanceM,result:result||null};
+    const distM=Number(result.distM);
+    if(distM>maxDistanceM)return{status:'outside',accepted:false,warning:true,outside:true,distM,warnDistanceM,maxDistanceM,result};
+    if(distM>warnDistanceM)return{status:'warning',accepted:true,warning:true,outside:false,distM,warnDistanceM,maxDistanceM,result};
+    return{status:'ok',accepted:true,warning:false,outside:false,distM,warnDistanceM,maxDistanceM,result};
+  }
+  function findApplicableRoute(lat,lon,routes,mode='auto',opts={}){
+    const nearest=findNearestRoute(lat,lon,routes,mode);
+    return assessRouteMatch(nearest,opts);
+  }
   function formatKp(v,d=2){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):String(v??'');}
-  return{EARTH_RADIUS_M:R,DEFAULT_LEGACY_MAX_KP_STEP,DEFAULT_DUPLICATE_DISTANCE_M,haversineM:haversine,projectPointToPolyline:project,splitLegacyPoints,normalizeSection,normalizeRoute:normalize,normalizeRoutes,kpAtAlongM:kpAt,nearestOnRoute,findNearestRoute,formatKp};
+  return{EARTH_RADIUS_M:R,DEFAULT_LEGACY_MAX_KP_STEP,DEFAULT_DUPLICATE_DISTANCE_M,DEFAULT_ROUTE_WARN_DISTANCE_M,DEFAULT_ROUTE_MAX_DISTANCE_M,haversineM:haversine,projectPointToPolyline:project,splitLegacyPoints,normalizeSection,normalizeRoute:normalize,normalizeRoutes,kpAtAlongM:kpAt,nearestOnRoute,findNearestRoute,assessRouteMatch,findApplicableRoute,formatKp};
 });
