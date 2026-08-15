@@ -3,8 +3,10 @@ name: route-engine-tests
 on:
   push:
     branches:
+      - main
       - feature/route-config-engine
       - feature/field-calibration-capture
+      - agent/beta-product-hardening
   pull_request:
     branches:
       - main
@@ -22,6 +24,9 @@ jobs:
           node --check route-engine.js
           node --check kml-route-loader.js
           node --check calibration-capture-core.js
+          node --check beta-app-core.js
+          node --check beta-route-config.js
+          node --check beta-route-package-builder-core.js
       - name: Unit tests
         run: node route-engine.test.js
       - name: R230/R453 regression tests
@@ -30,13 +35,28 @@ jobs:
         run: node kml-route-loader.test.js
       - name: Calibration capture core tests
         run: node calibration-capture-core.test.js
-      - name: Calibration capture page inline JavaScript syntax
+      - name: Beta app core tests
+        run: node beta-app-core.test.js
+      - name: Beta route package builder tests
+        run: node beta-route-package-builder-core.test.js
+      - name: Beta page smoke tests
+        run: node beta-page-smoke.test.js
+      - name: Inline JavaScript syntax
         run: |
           python - <<'PY'
           from pathlib import Path
-          s=Path('kp-calibration-capture.html').read_text(encoding='utf-8')
-          start=s.rindex('<script>')+len('<script>')
-          end=s.rindex('</script>')
-          Path('/tmp/kp-calibration-capture-inline.js').write_text(s[start:end],encoding='utf-8')
+          pages=['index.html','kp-calibration-capture.html','beta.html','beta-route-package-builder.html']
+          for page in pages:
+              s=Path(page).read_text(encoding='utf-8')
+              start=s.rindex('<script>')+len('<script>')
+              end=s.rindex('</script>')
+              out=Path('/tmp')/(page.replace('.html','')+'-inline.js')
+              out.write_text(s[start:end],encoding='utf-8')
+              print(out)
           PY
+          node --check /tmp/index-inline.js
           node --check /tmp/kp-calibration-capture-inline.js
+          node --check /tmp/beta-inline.js
+          node --check /tmp/beta-route-package-builder-inline.js
+      - name: Validate beta route package example
+        run: python -m json.tool beta-route-package.example.json >/dev/null
