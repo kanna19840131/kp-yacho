@@ -18,29 +18,37 @@
 
 `beta-route-package.example.json` を構成例として使う。
 
+有料βは **1パッケージ = 1担当路線** とする。1路線の中に複数sectionがある構成は可。
+
 必須項目:
 
 - `type`: `kp-yacho-route-package`
 - `schemaVersion`: `1`
-- `packageId`: 顧客・路線ごとに重複しないID
+- `packageId`: 顧客・路線ごとに重複しないID。英数字・`.`・`_`・`-` のみ、80文字以内
 - `label`: 利用者へ表示する担当路線名
-- `routes`: Route Engineが読める路線定義
+- `routes`: Route Engineが読める路線定義を1件だけ入れる
+- `rights.confirmed`: 必ず `true`
+- `rights.basis`: 顧客保有、許諾、利用条件確認済み公開データ等の利用権確認根拠
 
 推奨項目:
 
-- `rights.confirmed`: 利用権確認済みなら `true`
-- `rights.basis`: 顧客保有、許諾、利用条件確認済み公開データ等の根拠
 - `metadata.fieldVerified`: 実路線で既知KP照合まで終わったか
 - `metadata.sourceType`: `customer-kml`、`licensed`、`official-open-data` 等
 
-## Route Engine側の条件
+利用権確認済み情報がないroute packageは、`beta.html` のruntime側でも読み込みを拒否する。
+
+## 既知KPアンカーの条件
 
 有料βでは、原則として `polyline + anchors` または `sections[]` を使う。
 
 - 各sectionに異なるKPのアンカーを2点以上持たせる
+- 同一section内のKPは、線形に沿って単調増加または単調減少であること。途中反転は拒否する
+- 同一section内で同じKPを異なる位置へ重複登録しない
 - KML線形だけの幾何距離を公式KPとみなさない
 - 使用予定KP範囲をアンカーで挟む
 - アンカー範囲外は `extrapolated` としてβ画面側で自動KPを採用しない
+- `kp-calibration-capture.html` 由来の点でGPS精度50m超、または `quality: poor` の点はBuilderでアンカー利用を拒否する
+- 20m超〜50m以下の採取点は利用可能でも注意扱いとし、可能なら精度の良い地点で取り直す
 - 登録路線から30m超は注意、200m超は対象路線外として自動KPを止める（初期値）
 
 ## 納品までの流れ
@@ -48,7 +56,7 @@
 1. 顧客から対象路線名、使用KP範囲、既知KP、利用権を確認できる線形データを受領する。
 2. 必要なら `kp-calibration-capture.html` で既知KP＋GPSを採取し、JSONを書き出す。
 3. `beta-route-package-builder.html` を開き、KML＋既知KP JSON＋権利確認根拠を入力する。
-4. BuilderがKMLをRoute Configへ変換し、各sectionのアンカー数とRoute Engine設定を検証する。
+4. BuilderがKMLをRoute Configへ変換し、アンカー精度・各sectionのアンカー数・KP単調性・Route Engine設定を検証する。
 5. 使用予定範囲がアンカー内に収まることを確認する。
 6. Builderから担当路線パッケージJSONを書き出す。
 7. Android端末で `beta.html` を開き、パッケージを読み込む。
