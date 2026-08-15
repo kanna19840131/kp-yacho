@@ -39,6 +39,8 @@ jobs:
         run: node beta-app-core.test.js
       - name: Beta route package builder tests
         run: node beta-route-package-builder-core.test.js
+      - name: Beta route runtime policy tests
+        run: node beta-route-policy.test.js
       - name: Beta page smoke tests
         run: node beta-page-smoke.test.js
       - name: Inline JavaScript syntax
