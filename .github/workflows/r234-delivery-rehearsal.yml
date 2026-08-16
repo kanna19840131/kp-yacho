@@ -16,8 +16,6 @@ jobs:
           node-version: '24'
       - name: Probe official Route 234 KP CSV
         run: node r234-probe.js
-      - name: Probe measured Route 234 reference points
-        run: node r234-measured-probe.js
       - name: Download N13 2024 road centerlines for Route 234 corridor
         shell: bash
         run: |
@@ -30,9 +28,8 @@ jobs:
           done
           python - <<'PY'
           import json
-          files=['/tmp/n13-6441.geojson','/tmp/n13-6341.geojson']
           features=[]
-          for path in files:
+          for path in ['/tmp/n13-6441.geojson','/tmp/n13-6341.geojson']:
               with open(path,encoding='utf-8') as f:
                   features.extend(json.load(f).get('features',[]))
           with open('/tmp/n13-r234.geojson','w',encoding='utf-8') as f:
@@ -42,3 +39,5 @@ jobs:
           ls -lh /tmp/n13-*.geojson
       - name: Build and audit Route 234 N13 centerline
         run: node r234-centerline-pilot.js /tmp/n13-r234.geojson
+      - name: Probe measured Route 234 reference points
+        run: node r234-measured-probe.js
