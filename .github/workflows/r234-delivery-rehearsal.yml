@@ -18,3 +18,15 @@ jobs:
         run: node r234-probe.js
       - name: Probe measured Route 234 reference points
         run: node r234-measured-probe.js
+      - name: Download N13 2024 road centerlines for Route 234 corridor
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for mesh in 6441 6341; do
+            url="https://nlftp.mlit.go.jp/ksj/gml/data/N13/N13-24/N13-24_${mesh}_GEOJSON.zip"
+            curl -fL --retry 2 "$url" -o "/tmp/n13-${mesh}.zip"
+            unzip -l "/tmp/n13-${mesh}.zip" | tail -20
+            unzip -p "/tmp/n13-${mesh}.zip" "*/N13-24_${mesh}.geojson" > "/tmp/n13-${mesh}.geojson"
+            test -s "/tmp/n13-${mesh}.geojson"
+          done
+          ls -lh /tmp/n13-*.zip /tmp/n13-*.geojson
