@@ -16,3 +16,5 @@ jobs:
           node-version: '24'
       - name: Compare R234 measured candidates with same-KP network reference
         run: node r234-reference-diagnostic.js
+      - name: Audit R234 measured reference quality across full route
+        run: node r234-reference-quality-audit.js
