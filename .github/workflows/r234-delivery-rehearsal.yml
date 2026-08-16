@@ -39,5 +39,7 @@ jobs:
           ls -lh /tmp/n13-*.geojson
       - name: Build and audit Route 234 N13 centerline
         run: node r234-centerline-pilot.js /tmp/n13-r234.geojson
+      - name: Audit Route 234 KP calibration holdouts
+        run: node r234-calibration-pilot.js /tmp/r234-centerline.geojson
       - name: Probe measured Route 234 reference points
         run: node r234-measured-probe.js
