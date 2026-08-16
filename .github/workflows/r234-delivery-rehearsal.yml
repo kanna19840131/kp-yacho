@@ -25,8 +25,20 @@ jobs:
           for mesh in 6441 6341; do
             url="https://nlftp.mlit.go.jp/ksj/gml/data/N13/N13-24/N13-24_${mesh}_GEOJSON.zip"
             curl -fL --retry 2 "$url" -o "/tmp/n13-${mesh}.zip"
-            unzip -l "/tmp/n13-${mesh}.zip" | tail -20
             unzip -p "/tmp/n13-${mesh}.zip" "*/N13-24_${mesh}.geojson" > "/tmp/n13-${mesh}.geojson"
             test -s "/tmp/n13-${mesh}.geojson"
           done
-          ls -lh /tmp/n13-*.zip /tmp/n13-*.geojson
+          python - <<'PY'
+          import json
+          files=['/tmp/n13-6441.geojson','/tmp/n13-6341.geojson']
+          features=[]
+          for path in files:
+              with open(path,encoding='utf-8') as f:
+                  features.extend(json.load(f).get('features',[]))
+          with open('/tmp/n13-r234.geojson','w',encoding='utf-8') as f:
+              json.dump({'type':'FeatureCollection','features':features},f,ensure_ascii=False)
+          print('combined features',len(features))
+          PY
+          ls -lh /tmp/n13-*.geojson
+      - name: Build and audit Route 234 N13 centerline
+        run: node r234-centerline-pilot.js /tmp/n13-r234.geojson
