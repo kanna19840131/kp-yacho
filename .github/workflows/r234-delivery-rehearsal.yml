@@ -1,0 +1,48 @@
+name: r234-delivery-rehearsal
+
+on:
+  push:
+    branches:
+      - agent/r234-delivery-rehearsal
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Probe official Route 234 KP CSV
+        run: node r234-probe.js
+      - name: Download N13 2024 road centerlines for Route 234 corridor
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for mesh in 6441 6341; do
+            url="https://nlftp.mlit.go.jp/ksj/gml/data/N13/N13-24/N13-24_${mesh}_GEOJSON.zip"
+            curl -fL --retry 2 "$url" -o "/tmp/n13-${mesh}.zip"
+            unzip -p "/tmp/n13-${mesh}.zip" "*/N13-24_${mesh}.geojson" > "/tmp/n13-${mesh}.geojson"
+            test -s "/tmp/n13-${mesh}.geojson"
+          done
+          python - <<'PY'
+          import json
+          features=[]
+          for path in ['/tmp/n13-6441.geojson','/tmp/n13-6341.geojson']:
+              with open(path,encoding='utf-8') as f:
+                  features.extend(json.load(f).get('features',[]))
+          with open('/tmp/n13-r234.geojson','w',encoding='utf-8') as f:
+              json.dump({'type':'FeatureCollection','features':features},f,ensure_ascii=False)
+          print('combined features',len(features))
+          PY
+          ls -lh /tmp/n13-*.geojson
+      - name: Build and audit Route 234 N13 centerline
+        run: node r234-centerline-pilot.js /tmp/n13-r234.geojson
+      - name: Diagnose Route 234 KP15-17 stationing break
+        run: node r234-break-diagnostic.js /tmp/r234-centerline.geojson
+      - name: Audit Route 234 KP calibration holdouts
+        run: node r234-calibration-pilot.js /tmp/r234-centerline.geojson
+      - name: Probe measured Route 234 reference points
+        if: always()
+        run: node r234-measured-probe.js
