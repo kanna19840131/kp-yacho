@@ -16,3 +16,5 @@ jobs:
           node-version: '24'
       - name: Probe official Route 234 KP CSV
         run: node r234-probe.js
+      - name: Probe measured Route 234 reference points
+        run: node r234-measured-probe.js
