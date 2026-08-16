@@ -20,6 +20,7 @@ const clean=[
 let a=qa.auditReferenceAnchors(clean,{polyline,networkByKp:network,warningM:50,severeM:100});
 assert.strictEqual(a.rejected.length,0);assert.strictEqual(a.rows.every(x=>x.status==='accept'),true);ok();
 
+// Two independent severe signals agree: auto-reject.
 const bad=clean.map(x=>({...x}));bad[1].lat=35.005;
 a=qa.auditReferenceAnchors(bad,{polyline,networkByKp:network,warningM:50,severeM:100});
 const badRow=a.rows.find(x=>x.kp===10.1);
@@ -31,10 +32,10 @@ a=qa.auditReferenceAnchors(clean,{polyline,networkByKp:wrongNetwork,warningM:50,
 const oneSignal=a.rows.find(x=>x.kp===10.1);
 assert.strictEqual(oneSignal.rejected,false);assert.strictEqual(oneSignal.status,'verify');assert.ok(oneSignal.signals.networkSevere);assert.ok(!oneSignal.signals.centerlineSevere);ok();
 
-// A large route offset plus local stationing residual is enough even if no network reference is available.
+// Likewise, a centerline offset alone is not absolute truth when there is no independent reference.
 const noNetworkBad=clean.map(x=>({...x}));noNetworkBad[2]={kp:10.2,lat:35.004,lon:135.002};
 a=qa.auditReferenceAnchors(noNetworkBad,{polyline,networkByKp:new Map(),warningM:50,severeM:100});
 const nr=a.rows.find(x=>x.kp===10.2);
-assert.strictEqual(nr.rejected,true);assert.ok(nr.signals.centerlineSevere);assert.ok(nr.signals.neighborSevere);ok();
+assert.strictEqual(nr.rejected,false);assert.strictEqual(nr.status,'verify');assert.ok(nr.signals.centerlineSevere);ok();
 
 console.log(`reference anchor quality tests: ${count}/${count} passed`);
