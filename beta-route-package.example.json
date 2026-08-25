@@ -1,0 +1,36 @@
+{
+  "type": "kp-yacho-route-package",
+  "schemaVersion": 1,
+  "packageId": "sample-route-001",
+  "label": "サンプル路線（動作確認用）",
+  "issuedAt": "2026-08-16T00:00:00+09:00",
+  "rights": {
+    "confirmed": true,
+    "basis": "synthetic-test-data",
+    "note": "架空のテスト座標。実路線データではない。"
+  },
+  "metadata": {
+    "fieldVerified": false,
+    "sourceType": "synthetic-test"
+  },
+  "routes": [
+    {
+      "id": "SAMPLE",
+      "label": "サンプル路線",
+      "shortName": "SAMPLE",
+      "metadata": {
+        "fieldVerified": false,
+        "sourceType": "synthetic-test"
+      },
+      "polyline": [
+        {"lat": 35.0000, "lon": 135.0000},
+        {"lat": 35.0000, "lon": 135.0010},
+        {"lat": 35.0000, "lon": 135.0020}
+      ],
+      "anchors": [
+        {"kp": 10.0, "lat": 35.0000, "lon": 135.0000},
+        {"kp": 10.2, "lat": 35.0000, "lon": 135.0020}
+      ]
+    }
+  ]
+}

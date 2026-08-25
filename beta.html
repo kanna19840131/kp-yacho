@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KP野帳 β</title>
+<style>
+:root{
+  --bg:#08090b;--card:#14171c;--card2:#0f1216;--text:#f5f7fa;--muted:#aeb5c0;
+  --blue:#79aaff;--green:#2bc267;--red:#ff6268;--gray:#565d68;--line:#323842;--warn:#f0c24b;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:14px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:780px;margin:0 auto}
+h1{font-size:30px;margin:8px 0 2px}
+.lead{color:var(--muted);font-size:13px;margin-bottom:14px}
+h2{font-size:20px;color:var(--blue);border-bottom:2px solid var(--blue);padding-bottom:7px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.subcard{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}
+label{display:block;color:var(--muted);font-size:13px;margin-top:9px}
+input,select,textarea{width:100%;padding:12px;margin-top:5px;border-radius:10px;border:1px solid #505866;background:#272c33;color:var(--text);font-size:17px}
+input[readonly]{background:#1c2026;color:#d7dce3}
+button{border:0;border-radius:10px;padding:12px 14px;font-size:16px;font-weight:800;color:#fff;background:#0d6efd;margin-top:8px;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}.green{background:var(--green);color:#031407}.red{background:var(--red)}.gray{background:var(--gray)}.warnbtn{background:#8a6410}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
+.wrap{display:flex;gap:8px;flex-wrap:wrap}.wrap>*{flex:1 1 150px}
+.big{font-size:40px;font-weight:900;text-align:center;margin:8px 0;line-height:1.1}
+.muted{color:var(--muted);font-size:13px;line-height:1.5}
+.notice{background:#302806;border:1px solid #796516;color:#ffe394;padding:10px;border-radius:10px;margin-top:8px;font-size:14px;line-height:1.45}
+.error{background:#351113;border:1px solid #7d282b;color:#ffb9bd;padding:10px;border-radius:10px;margin-top:8px;font-size:14px;line-height:1.45}
+.ok{background:#11361f;border:1px solid #276c3d;color:#9af0b5;padding:10px;border-radius:10px;margin-top:8px;font-size:14px;line-height:1.45}
+.badge{display:inline-block;padding:3px 7px;border-radius:999px;border:1px solid #4b5562;font-size:12px;margin:2px 4px 2px 0}
+.badge-blue{border-color:#2c5f9d;color:#a9d0ff}.badge-green{border-color:#2f7c49;color:#a7f0bc}.badge-warn{border-color:#856f1a;color:#ffe394}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.box{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}.box span{font-size:12px;color:var(--muted)}.box b{display:block;font-size:25px;margin-top:3px}
+.sheet-line{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px;margin:7px 0;font-size:14px;line-height:1.4}.sheet-line b{font-size:16px;color:var(--blue)}
+.photo-ok{color:#9af0b5}.photo-warn{color:#ffe394}.photo-ng{color:#ffb9bd}
+.editing{outline:2px solid var(--warn)}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap}.toolbar button{font-size:13px;padding:8px 10px}
+textarea{min-height:140px;font-size:13px}
+hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+.footer{text-align:center;color:#7f8791;font-size:12px;line-height:1.6;margin:18px 0}
+.hidden{display:none!important}
+@media (max-width:540px){body{padding:10px}.row{flex-direction:column}.big{font-size:36px}}
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">KP野帳 β</h1>
+  <div class="lead">担当路線専用・スマホ現場野帳</div>
+
+  <div class="card">
+    <h2>推定KP</h2>
+    <div id="routeSetup" class="notice hidden"></div>
+    <div class="big" id="currentKp">GPS待機中</div>
+    <div class="muted" id="gpsInfo">GPS開始を押してください。</div>
+    <div class="muted" id="routeInfo"></div>
+    <div id="gpsAlert" class="notice hidden"></div>
+    <div class="row">
+      <button id="gpsStartBtn" onclick="startGps()">GPS開始</button>
+      <button class="gray" onclick="stopGps()">GPS停止</button>
+    </div>
+    <div id="routeModeWrap">
+      <label>路線モード</label>
+      <select id="routeMode"></select>
+    </div>
+    <div class="row">
+      <div><label>左右</label><select id="currentSide"><option>R</option><option>L</option><option>中央</option><option>-</option></select></div>
+      <div><label>手動KP</label><input id="manualKp" type="number" step="0.001" placeholder="例 15.840"></div>
+    </div>
+    <div class="row">
+      <button id="useEstimatedBtn" class="green" onclick="useEstimatedKp()" disabled>この推定KPを使う</button>
+      <button class="gray" onclick="useManualKp()">手動KPを使う</button>
+    </div>
+    <div id="selectedInfo" class="subcard muted">記録に使うKP：未選択</div>
+    <div class="muted" style="margin-top:8px">推定KPはスマートフォンGPSと登録路線情報から算出する現場確認用の目安です。</div>
+  </div>
+
+  <div class="card">
+    <h2>基本情報</h2>
+    <div class="row">
+      <div><label>日付</label><input id="date" type="date"></div>
+      <div><label>午前 / 午後</label><select id="session"><option>午前</option><option>午後</option></select></div>
+    </div>
+    <div class="row">
+      <div><label>推定係数 ㎡/t</label><input id="rate" type="number" step="0.1"></div>
+      <div><label>担当路線</label><input id="routeLabel" readonly></div>
+    </div>
+    <div class="row">
+      <div><label>合材搬入量 t</label><input id="inTon" type="number" step="0.01" placeholder="例 3.5"></div>
+      <div><label>残量 t</label><input id="leftTon" type="number" step="0.01" placeholder="例 0.8"></div>
+    </div>
+    <label><input id="regPhoto" type="checkbox" style="width:auto"> 規制状況撮影済</label>
+    <div class="muted">入力内容と施工記録はこの端末内へ自動保存します。</div>
+  </div>
+
+  <div class="card">
+    <h2>施工入力</h2>
+    <div id="editBanner" class="notice hidden"></div>
+    <div class="row">
+      <div><label>No（週間連番）</label><input id="no" type="number" min="1"></div>
+      <div><label>枝番</label><input id="branch" type="number" min="0" placeholder="例 1"></div>
+    </div>
+    <div class="row">
+      <div><label>KP</label><input id="kp" type="number" step="0.001" placeholder="先に推定KPか手動KPを選択"></div>
+      <div><label>左右</label><select id="side"><option>R</option><option>L</option><option>中央</option><option>-</option></select></div>
+    </div>
+    <button class="green" onclick="startWorkRecord()">施工前登録（面積は後で）</button>
+    <hr>
+    <label>形状</label>
+    <select id="shape" onchange="shapeChanged();calcAreaView()">
+      <option value="rect">長方形：W × L</option>
+      <option value="trap">台形：W × (L1 + L2) ÷ 2</option>
+      <option value="tri">三角形：W × L ÷ 2</option>
+      <option value="manual">直接入力</option>
+    </select>
+    <div id="dimWrap">
+      <div class="row">
+        <div><label>W（幅）m</label><input id="w" type="number" step="0.01" oninput="calcAreaView()"></div>
+        <div><label>L / L1 m</label><input id="l1" type="number" step="0.01" oninput="calcAreaView()"></div>
+      </div>
+      <div id="l2Wrap"><label>L2 m（台形用）</label><input id="l2" type="number" step="0.01" oninput="calcAreaView()"></div>
+    </div>
+    <div id="manualWrap" class="hidden"><label>面積 ㎡</label><input id="manualArea" type="number" step="0.01" oninput="calcAreaView()"></div>
+    <label>備考</label><input id="memo" placeholder="例 写真場、未施工、交通量多い">
+    <div class="wrap" style="margin-top:8px">
+      <label><input id="photoBefore" type="checkbox" style="width:auto"> 施工前写真</label>
+      <label><input id="photoAfter" type="checkbox" style="width:auto"> 施工完了写真</label>
+    </div>
+    <div class="big" id="areaView">0.00㎡</div>
+    <div class="muted" id="formulaView">計算式：--</div>
+    <div class="muted" id="estView">推定使用合材：-- t</div>
+    <div class="row">
+      <button id="addBtn" class="green" onclick="saveEntry()">行追加</button>
+      <button id="cancelEditBtn" class="gray hidden" onclick="cancelEdit()">編集取消</button>
+      <button class="gray" onclick="clearEntry()">入力クリア</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>本日サマリー</h2>
+    <div class="summary-grid">
+      <div class="box"><span>午前</span><b id="amArea">0.00</b><span>㎡</span></div>
+      <div class="box"><span>午後</span><b id="pmArea">0.00</b><span>㎡</span></div>
+      <div class="box"><span>合計面積</span><b id="totalArea">0.00</b><span>㎡</span></div>
+      <div class="box"><span>推定使用</span><b id="estTon">0.00</b><span>t</span></div>
+      <div class="box"><span>使用合材</span><b id="usedTon">--</b><span>t</span></div>
+      <div class="box"><span>㎡/t</span><b id="m2perTon">--</b><span>㎡/t</span></div>
+      <div class="box"><span>残り施工可能</span><b id="remainArea">--</b><span>㎡</span></div>
+      <div class="box"><span>写真未確認</span><b id="photoPending">0</b><span>件</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>記録一覧</h2>
+    <div class="toolbar">
+      <button class="gray" onclick="sortItems('input')">入力順</button>
+      <button class="gray" onclick="sortItems('no')">No順</button>
+      <button class="gray" onclick="sortItems('kp')">KP順</button>
+    </div>
+    <div id="records" class="muted">記録なし</div>
+  </div>
+
+  <div class="card">
+    <h2>施工サマリー</h2>
+    <button onclick="makeSummary()">サマリー作成</button>
+    <button class="gray" onclick="copySummary()">コピー</button>
+    <textarea id="summaryText" placeholder="サマリー作成を押してください"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>保存・バックアップ</h2>
+    <div class="row">
+      <button class="green" onclick="newDay()">新しい1日を開始</button>
+      <button class="gray" onclick="exportBackup()">バックアップJSON</button>
+    </div>
+    <div class="row">
+      <button class="gray" onclick="document.getElementById('restoreFile').click()">バックアップ復元</button>
+      <button class="warnbtn" onclick="resetWeeklyNo()">週間Noを1に戻す</button>
+    </div>
+    <hr>
+    <div class="row">
+      <button onclick="document.getElementById('routePackageFile').click()">担当路線パッケージ読込</button>
+      <button class="gray" onclick="removeRoutePackage()">端末の路線設定を外す</button>
+    </div>
+    <input id="routePackageFile" class="hidden" type="file" accept="application/json,.json" onchange="installRoutePackageFile(event)">
+    <input id="restoreFile" class="hidden" type="file" accept="application/json,.json" onchange="restoreBackupFile(event)">
+    <div class="muted" id="archiveInfo"></div>
+    <div class="error" style="margin-top:10px">端末故障・ブラウザデータ削除に備え、定期的にバックアップJSONを書き出してください。</div>
+  </div>
+
+  <div class="card">
+    <h2>利用上の注意</h2>
+    <div class="muted">
+      スマートフォンのGPSと登録路線情報から、現場確認用の推定KPを表示します。GPSや路線データの状態により誤差が生じます。<br>
+      測量、行政提出値、出来形の確定、契約上の確定位置を自動保証するものではありません。対象路線外やKPアンカー範囲外では、自動KPを止めます。<br>
+      最終的な施工位置・安全・提出資料の判断は利用者が行ってください。
+    </div>
+  </div>
+
+  <div class="footer">
+    <span id="footerProduct">KP野帳 β</span><br>
+    <span id="provider"></span>
+  </div>
+</main>
+
+<script src="./route-engine.js"></script>
+<script src="./beta-app-core.js"></script>
+<script src="./beta-route-config.js"></script>
+<script>
+'use strict';
+const Core=window.KPBetaCore;
+const Engine=window.KPRouteEngine;
+const config=window.KP_YACHO_BETA_CONFIG||{};
+let routePackage=null;
+let routes=[];
+const decimals=Number.isInteger(config.kpDecimals)?config.kpDecimals:2;
+const warnDistanceM=Number(config.warnDistanceM)||30;
+const maxDistanceM=Number(config.maxDistanceM)||200;
+let productId=String(config.productId||'beta-template');
+let storageKey='kp_yacho_beta_v1:'+productId;
+const routePackageStorageKey='kp_yacho_beta_route_package_v1';
+let state;
+let watchId=null;
+let lastGpsDecision=null;
+let selectedKp=null;
+let editingIndex=null;
+let routeMode='auto';
+
+function byId(id){return document.getElementById(id)}
+function value(id){return byId(id).value}
+function numberValue(id){const n=Number(value(id));return Number.isFinite(n)?n:0}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':'&quot;',"'":'&#039;'}[m]))}
+function fmt(n,d=2){const x=Number(n);return Number.isFinite(x)?x.toFixed(d):'--'}
+function routeById(id){return routes.find(r=>String(r.id)===String(id))||null}
+function routeLabel(id){const r=routeById(id);return r?String(r.label||r.shortName||r.id):(id||'--')}
+function routeShort(id){const r=routeById(id);return r?String(r.shortName||r.label||r.id):(id||'--')}
+function firstRouteId(){return routes[0]?String(routes[0].id):''}
+
+function loadInstalledRoutePackage(){
+  let raw=null;
+  try{raw=JSON.parse(localStorage.getItem(routePackageStorageKey)||'null')}catch(e){raw=null}
+  if(raw){
+    try{return Core.validateRoutePackage(raw)}catch(e){localStorage.removeItem(routePackageStorageKey)}
+  }
+  if(Array.isArray(config.routes)&&config.routes.length){
+    return Core.validateRoutePackage({type:'kp-yacho-route-package',schemaVersion:1,packageId:String(config.productId||'embedded'),label:config.productName||'KP野帳 β',rights:{confirmed:false,note:'embedded developer config'},routes:config.routes});
+  }
+  return null;
+}
+function applyRoutePackage(pkg){
+  routePackage=pkg;
+  routes=pkg?pkg.routes:[];
+  productId=pkg?pkg.packageId:String(config.productId||'beta-template');
+  storageKey='kp_yacho_beta_v1:'+productId;
+}
+function loadState(){
+  let raw=null;
+  try{raw=JSON.parse(localStorage.getItem(storageKey)||'null')}catch(e){raw=null}
+  state=Core.normalizeState(raw,{routeId:firstRouteId(),rate:Number(config.defaultRate)||45});
+  if(!state.routeId&&firstRouteId())state.routeId=firstRouteId();
+}
+function persist(){localStorage.setItem(storageKey,JSON.stringify(state))}
+
+function init(){
+  byId('title').textContent=config.productName||'KP野帳 β';
+  byId('footerProduct').textContent=config.productName||'KP野帳 β';
+  byId('provider').textContent=config.providerLabel||'';
+  applyRoutePackage(loadInstalledRoutePackage());
+  loadState();
+  setupRoutes();
+  syncBasicsFromState();
+  shapeChanged();
+  calcAreaView();
+  clearEntry(false);
+  renderAll();
+  if(!routes.length){
+    const setup=byId('routeSetup');
+    setup.classList.remove('hidden');
+    setup.textContent='路線設定未完了：GPS→推定KPは停止中です。手動KPでの施工記録は利用できます。担当路線パッケージJSONを読み込んでください。';
+    byId('gpsStartBtn').disabled=true;
+    byId('currentKp').textContent='路線設定待ち';
+  }else{
+    try{Engine.normalizeRoutes(routes)}catch(e){
+      const setup=byId('routeSetup');
+      setup.className='error';
+      setup.textContent='路線設定エラー：'+e.message;
+      byId('gpsStartBtn').disabled=true;
+    }
+  }
+}
+
+function setupRoutes(){
+  const select=byId('routeMode');
+  select.innerHTML='';
+  if(routes.length>1){
+    select.add(new Option('自動','auto'));
+    routes.forEach(r=>select.add(new Option(String(r.label||r.id),String(r.id))));
+    routeMode='auto';
+    byId('routeModeWrap').classList.remove('hidden');
+  }else if(routes.length===1){
+    select.add(new Option(String(routes[0].label||routes[0].id),String(routes[0].id)));
+    routeMode=String(routes[0].id);
+    byId('routeModeWrap').classList.add('hidden');
+  }else{
+    select.add(new Option('路線未設定','auto'));
+    routeMode='auto';
+    byId('routeModeWrap').classList.add('hidden');
+  }
+  select.value=routeMode;
+  select.onchange=()=>{routeMode=select.value;lastGpsDecision=null;selectedKp=null;renderSelected();};
+  if(routes.length){
+    const rights=routePackage&&routePackage.rights&&routePackage.rights.confirmed===true?'権利確認済':'権利確認情報なし';
+    byId('routeInfo').textContent=`担当路線：${routes.map(r=>r.label||r.id).join(' / ')} / パッケージ：${routePackage?routePackage.label:productId} / ${rights}`;
+  }else byId('routeInfo').textContent='設定路線：なし';
+}
+
+function syncBasicsFromState(){
+  byId('date').value=state.date;
+  byId('session').value='午前';
+  byId('rate').value=state.rate;
+  byId('inTon').value=state.inTon;
+  byId('leftTon').value=state.leftTon;
+  byId('regPhoto').checked=state.regPhoto;
+  byId('routeLabel').value=routeLabel(state.routeId||firstRouteId());
+  ['date','rate','inTon','leftTon'].forEach(id=>byId(id).addEventListener('change',saveBasics));
+  byId('regPhoto').addEventListener('change',saveBasics);
+}
+
+function saveBasics(){
+  state.date=value('date')||Core.todayLocal();
+  state.rate=numberValue('rate')>0?numberValue('rate'):45;
+  state.inTon=value('inTon');
+  state.leftTon=value('leftTon');
+  state.regPhoto=byId('regPhoto').checked;
+  persist();
+  renderSummaryBoxes();
+}
+
+function startGps(){
+  if(!routes.length){alert('担当路線データが未設定です。');return}
+  if(!navigator.geolocation){alert('この端末はGPSに対応していません。');return}
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  byId('gpsInfo').textContent='GPS取得中...';
+  watchId=navigator.geolocation.watchPosition(onGpsSuccess,onGpsError,{enableHighAccuracy:true,maximumAge:0,timeout:8000});
+}
+function stopGps(){
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  byId('gpsInfo').textContent='GPS停止中';
+}
+function onGpsError(err){
+  lastGpsDecision=null;
+  byId('useEstimatedBtn').disabled=true;
+  showGpsAlert('error','GPSエラー：'+err.message);
+}
+function onGpsSuccess(pos){
+  let result=null;
+  try{result=Engine.findNearestRoute(pos.coords.latitude,pos.coords.longitude,routes,routeMode)}catch(e){showGpsAlert('error','KP算出エラー：'+e.message);return}
+  lastGpsDecision=Core.gpsDecision(result,pos.coords.accuracy,warnDistanceM,maxDistanceM);
+  const time=new Date().toLocaleTimeString();
+  if(lastGpsDecision.estimated){
+    const e=lastGpsDecision.estimated;
+    byId('currentKp').textContent=`${e.shortName||e.routeLabel} 推定KP${fmt(e.kp,decimals)}`;
+    byId('gpsInfo').textContent=`路線まで 約${Math.round(e.distM)}m / GPS精度 約${Math.round(e.accuracyM)}m / ${time}`;
+    byId('useEstimatedBtn').disabled=false;
+    if(lastGpsDecision.status==='warn')showGpsAlert('notice',lastGpsDecision.message+'。周囲のKP標示・現場資料と照合してください。');
+    else hideGpsAlert();
+  }else{
+    byId('useEstimatedBtn').disabled=true;
+    byId('currentKp').textContent=lastGpsDecision.status==='out'?'対象路線外':'KP算出不可';
+    byId('gpsInfo').textContent=(lastGpsDecision.message||'KP算出不可')+` / GPS精度 約${Math.round(lastGpsDecision.accuracyM||0)}m / ${time}`;
+    showGpsAlert('error',lastGpsDecision.message||'自動KPを採用しません。');
+  }
+}
+function showGpsAlert(kind,text){const el=byId('gpsAlert');el.className=kind==='error'?'error':kind==='ok'?'ok':'notice';el.textContent=text}
+function hideGpsAlert(){const el=byId('gpsAlert');el.className='notice hidden';el.textContent=''}
+
+function useEstimatedKp(){
+  try{selectedKp=Core.selectEstimatedKp(lastGpsDecision,value('currentSide'))}catch(e){alert(e.message);return}
+  state.routeId=selectedKp.routeId||state.routeId;
+  byId('routeLabel').value=routeLabel(state.routeId);
+  byId('kp').value=fmt(selectedKp.kp,3);
+  byId('side').value=selectedKp.side;
+  persist();
+  renderSelected();
+}
+function useManualKp(){
+  const kp=value('manualKp');
+  const rid=state.routeId||firstRouteId()||'manual';
+  try{selectedKp=Core.selectManualKp(kp,value('currentSide'),rid,routeLabel(rid))}catch(e){alert(e.message);return}
+  state.routeId=rid;
+  byId('routeLabel').value=routeLabel(state.routeId);
+  byId('kp').value=fmt(selectedKp.kp,3);
+  byId('side').value=selectedKp.side;
+  persist();
+  renderSelected();
+}
+function renderSelected(){
+  const box=byId('selectedInfo');
+  if(!selectedKp){box.textContent='記録に使うKP：未選択';return}
+  const source=selectedKp.source==='estimated'?'推定KP':'手動KP';
+  box.innerHTML=`記録に使うKP：<b>${esc(routeShort(selectedKp.routeId))} KP${esc(fmt(selectedKp.kp,decimals))}${esc(selectedKp.side)}</b> <span class="badge ${selectedKp.source==='estimated'?'badge-blue':'badge-green'}">${source}</span>`;
+}
+
+function selectionFromForm(){
+  const kp=numberValue('kp');
+  if(!Number.isFinite(kp)||kp<0||value('kp')==='')throw new Error('KPを確定してください。');
+  const side=value('side');
+  if(selectedKp&&Math.abs(Number(selectedKp.kp)-kp)<0.0005&&selectedKp.side===side)return selectedKp;
+  const rid=state.routeId||firstRouteId()||'manual';
+  const manual=Core.selectManualKp(kp,side,rid,routeLabel(rid));
+  manual.source=selectedKp?'manual-edit':'manual';
+  return manual;
+}
+
+function shapeChanged(){
+  const shape=value('shape');
+  byId('manualWrap').classList.toggle('hidden',shape!=='manual');
+  byId('dimWrap').classList.toggle('hidden',shape==='manual');
+  byId('l2Wrap').classList.toggle('hidden',shape!=='trap');
+}
+function currentArea(){
+  try{return Core.calcArea(value('shape'),{w:value('w'),l1:value('l1'),l2:value('l2'),manualArea:value('manualArea')})}catch(e){return {area:0,formula:'--'}}
+}
+function calcAreaView(){
+  const r=currentArea();
+  byId('areaView').textContent=fmt(r.area)+'㎡';
+  byId('formulaView').textContent='計算式：'+r.formula;
+  const rate=numberValue('rate')||45;
+  byId('estView').textContent=r.area>0?`推定使用合材：${fmt(Core.estimateTon(r.area,rate))}t（${fmt(rate,1)}㎡/t）`:'推定使用合材：-- t';
+}
+
+function startWorkRecord(){
+  if(editingIndex!==null){alert('編集中です。訂正を保存するか編集取消を押してください。');return}
+  saveBasics();
+  let selection;
+  try{selection=selectionFromForm()}catch(e){alert(e.message);return}
+  const result=Core.createStartedRecord({state,selection,date:state.date,session:value('session'),no:value('no'),branch:value('branch'),memo:value('memo')});
+  state=Core.upsertRecord(state,result.record);
+  state.nextNo=result.nextNo;
+  persist();
+  clearEntry(true);
+  renderAll();
+}
+
+function saveEntry(){
+  saveBasics();
+  const area=currentArea();
+  if(!(area.area>0)){alert('面積が0です。寸法または直接入力を確認してください。');return}
+  let selection;
+  try{selection=selectionFromForm()}catch(e){alert(e.message);return}
+  const old=editingIndex===null?null:state.items[editingIndex];
+  const result=Core.createCompletedRecord({
+    state,date:state.date,routeId:selection.routeId||state.routeId,routeLabel:selection.routeLabel||routeLabel(state.routeId),session:value('session'),
+    no:value('no'),branch:value('branch'),kp:numberValue('kp'),side:value('side'),shape:value('shape'),w:value('w'),l1:value('l1'),l2:value('l2'),manualArea:value('manualArea'),
+    formula:area.formula,area:area.area,memo:value('memo'),photoBefore:byId('photoBefore').checked,photoAfter:byId('photoAfter').checked,
+    source:selection.source,gpsDistM:selection.gpsDistM,gpsAccuracyM:selection.gpsAccuracyM,selectedAt:selection.capturedAt,
+    order:old&&old.order
+  });
+  state=Core.upsertRecord(state,result.record,editingIndex);
+  state.nextNo=Math.max(state.nextNo,result.nextNo);
+  persist();
+  clearEntry(true);
+  renderAll();
+}
+
+function clearEntry(keepNo=false){
+  editingIndex=null;
+  byId('editBanner').className='notice hidden';
+  byId('editBanner').textContent='';
+  byId('addBtn').textContent='行追加';
+  byId('cancelEditBtn').classList.add('hidden');
+  if(!keepNo)byId('no').value=state?state.nextNo:1;
+  else byId('no').value=state.nextNo;
+  byId('branch').value='';
+  byId('kp').value='';
+  byId('side').value=value('currentSide')||'R';
+  byId('shape').value='rect';
+  ['w','l1','l2','manualArea','memo'].forEach(id=>byId(id).value='');
+  byId('photoBefore').checked=false;
+  byId('photoAfter').checked=false;
+  selectedKp=null;
+  renderSelected();
+  shapeChanged();
+  calcAreaView();
+}
+function cancelEdit(){clearEntry(false);renderRecords()}
+
+function editItem(index){
+  const it=state.items[index];if(!it)return;
+  editingIndex=index;
+  byId('no').value=it.no||'';byId('branch').value=it.branch||'';byId('kp').value=it.kp??'';byId('side').value=it.side||'R';
+  byId('session').value=it.session||'午前';byId('shape').value=it.shape||'manual';shapeChanged();
+  byId('w').value=it.w||'';byId('l1').value=it.l1||'';byId('l2').value=it.l2||'';byId('manualArea').value=it.manualArea||((it.shape==='manual'&&it.area)?it.area:'');
+  byId('memo').value=it.memo||'';byId('photoBefore').checked=!!it.photoBefore;byId('photoAfter').checked=!!it.photoAfter;
+  selectedKp={kp:Number(it.kp),side:it.side||'R',routeId:it.routeId||state.routeId,routeLabel:it.routeLabel||routeLabel(it.routeId),source:it.source||'manual',gpsDistM:it.gpsDistM,gpsAccuracyM:it.gpsAccuracyM,capturedAt:it.selectedAt};
+  byId('editBanner').className='notice';
+  byId('editBanner').textContent=`編集中：No.${it.no}${it.branch?'-'+it.branch:''} / KP${fmt(it.kp,decimals)}${it.side||''}`;
+  byId('addBtn').textContent='訂正を保存';byId('cancelEditBtn').classList.remove('hidden');
+  renderSelected();calcAreaView();byId('editBanner').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function deleteItem(index){
+  if(!confirm('この記録を削除しますか？'))return;
+  state=Core.deleteRecord(state,index);persist();if(editingIndex!==null)clearEntry(false);renderAll();
+}
+function togglePhoto(index,kind,checked){
+  const it=state.items[index];if(!it)return;
+  if(kind==='before')it.photoBefore=!!checked;else it.photoAfter=!!checked;
+  persist();renderAll();
+}
+function sortItems(mode){
+  if(mode==='input')state.items.sort((a,b)=>(a.order||0)-(b.order||0));
+  if(mode==='no')state.items.sort((a,b)=>(Number(a.no)||0)-(Number(b.no)||0)||(Number(a.branch)||0)-(Number(b.branch)||0));
+  if(mode==='kp')state.items.sort((a,b)=>(Number(a.kp)||0)-(Number(b.kp)||0)||(Number(a.no)||0)-(Number(b.no)||0));
+  persist();renderRecords();
+}
+
+function renderAll(){
+  byId('no').value=editingIndex===null?state.nextNo:byId('no').value;
+  byId('routeLabel').value=routeLabel(state.routeId||firstRouteId());
+  renderSummaryBoxes();renderRecords();renderArchiveInfo();
+}
+function renderSummaryBoxes(){
+  const t=Core.dailyTotals(state);
+  byId('amArea').textContent=fmt(t.am);byId('pmArea').textContent=fmt(t.pm);byId('totalArea').textContent=fmt(t.total);byId('estTon').textContent=fmt(t.estimatedTon);
+  byId('usedTon').textContent=t.inTon>0?fmt(t.usedTon):'--';byId('m2perTon').textContent=t.m2perTon===null?'--':fmt(t.m2perTon,1);byId('remainArea').textContent=t.remainArea===null?'--':fmt(t.remainArea,0);byId('photoPending').textContent=t.photoPending;
+}
+function photoText(it){
+  if(it.started&&!(Number(it.area)>0))return ['施工前登録','badge-blue'];
+  if(it.photoBefore&&it.photoAfter)return ['前後OK','badge-green'];
+  if(it.photoBefore&&!it.photoAfter)return ['完了写真未','badge-warn'];
+  return ['写真未確認','badge-warn'];
+}
+function renderRecords(){
+  const box=byId('records');
+  if(!state.items.length){box.innerHTML='記録なし';return}
+  let cum=0;
+  box.innerHTML=state.items.map((it,i)=>{
+    cum+=Number(it.area)||0;
+    const p=photoText(it);const src=it.source==='estimated'?'推定':'手動';
+    const meta=it.gpsDistM!==undefined&&it.source==='estimated'?` / 路線まで約${Math.round(Number(it.gpsDistM)||0)}m`:'';
+    return `<div class="sheet-line ${editingIndex===i?'editing':''}">
+      <b>No.${esc(it.no)}${it.branch?'-'+esc(it.branch):''}　KP${esc(fmt(it.kp,decimals))}${esc(it.side||'')}</b><br>
+      <span>${esc(it.session)} / ${esc(it.formula||'--')} / ${esc(fmt(it.area))}㎡ / 累計 ${esc(fmt(cum))}㎡</span><br>
+      <span class="badge ${p[1]}">${p[0]}</span><span class="badge">${src}${meta}</span>
+      ${it.memo?`<div class="muted">${esc(it.memo)}</div>`:''}
+      <div class="toolbar">
+        <button class="gray" onclick="editItem(${i})">編集</button>
+        <button class="red" onclick="deleteItem(${i})">削除</button>
+        <label><input type="checkbox" style="width:auto" ${it.photoBefore?'checked':''} onchange="togglePhoto(${i},'before',this.checked)"> 施工前</label>
+        <label><input type="checkbox" style="width:auto" ${it.photoAfter?'checked':''} onchange="togglePhoto(${i},'after',this.checked)"> 完了</label>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderArchiveInfo(){byId('archiveInfo').textContent=`端末内の過去日アーカイブ：${state.archives.length}日 / 次の週間No：${state.nextNo}`}
+
+function makeSummary(){saveBasics();byId('summaryText').value=Core.makeSummary(state,routeLabel(state.routeId))}
+async function copySummary(){
+  if(!value('summaryText'))makeSummary();
+  const text=value('summaryText');
+  try{await navigator.clipboard.writeText(text);alert('コピーしました')}catch(e){const ta=byId('summaryText');ta.select();document.execCommand('copy');alert('コピーしました')}
+}
+function newDay(){
+  if(!confirm('現在日の記録を端末内アーカイブへ移し、新しい1日を開始します。週間Noは引き継ぎます。実行しますか？'))return;
+  saveBasics();state=Core.startNewDay(state,Core.todayLocal());persist();syncBasicsValuesOnly();clearEntry(false);byId('summaryText').value='';renderAll();
+}
+function syncBasicsValuesOnly(){
+  byId('date').value=state.date;byId('rate').value=state.rate;byId('inTon').value=state.inTon;byId('leftTon').value=state.leftTon;byId('regPhoto').checked=state.regPhoto;byId('routeLabel').value=routeLabel(state.routeId||firstRouteId());
+}
+function resetWeeklyNo(){
+  if(state.items.length){alert('本日の記録がある間は週間Noをリセットできません。新しい1日を開始してから実行してください。');return}
+  if(!confirm('週間Noを1に戻しますか？'))return;
+  state.nextNo=1;persist();clearEntry(false);renderAll();
+}
+function exportBackup(){
+  saveBasics();
+  const env=Core.makeBackupEnvelope(state,productId);
+  const blob=new Blob([JSON.stringify(env,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`kp-yacho-beta-${productId}-${state.date}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+async function restoreBackupFile(event){
+  const file=event.target.files&&event.target.files[0];if(!file)return;
+  try{
+    const env=JSON.parse(await file.text());
+    const restored=Core.restoreBackupEnvelope(env,productId);
+    if(!confirm(`バックアップ（${restored.date} / ${restored.items.length}件）で現在データを置き換えますか？`))return;
+    state=restored;persist();syncBasicsValuesOnly();clearEntry(false);renderAll();alert('復元しました');
+  }catch(e){alert('復元できません：'+e.message)}finally{event.target.value=''}
+}
+async function installRoutePackageFile(event){
+  const file=event.target.files&&event.target.files[0];if(!file)return;
+  try{
+    const pkg=Core.validateRoutePackage(JSON.parse(await file.text()));
+    Engine.normalizeRoutes(pkg.routes);
+    const rightsOk=pkg.rights&&pkg.rights.confirmed===true;
+    if(!rightsOk&&!confirm('この路線パッケージには利用権確認済みの記録がありません。β検証用として読み込みますか？'))return;
+    if(!confirm(`担当路線「${pkg.label}」をこの端末へ設定しますか？`))return;
+    persist();
+    localStorage.setItem(routePackageStorageKey,JSON.stringify(pkg));
+    alert('担当路線を設定しました。ページを再読み込みします。');
+    location.reload();
+  }catch(e){alert('路線パッケージを読めません：'+e.message)}finally{event.target.value=''}
+}
+function removeRoutePackage(){
+  if(!routePackage){alert('端末に担当路線パッケージは設定されていません。');return}
+  if(!confirm('端末の担当路線設定だけを外します。施工記録データは削除しません。実行しますか？'))return;
+  persist();
+  localStorage.removeItem(routePackageStorageKey);
+  alert('担当路線設定を外しました。ページを再読み込みします。');
+  location.reload();
+}
+
+init();
+</script>
+</body>
+</html>

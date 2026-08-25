@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KP野帳 β 路線パッケージ作成</title>
+<style>
+:root{--bg:#08090b;--card:#14171c;--text:#f5f7fa;--muted:#aeb5c0;--blue:#79aaff;--green:#2bc267;--red:#ff6268;--line:#323842}
+*{box-sizing:border-box}body{margin:0;padding:14px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:760px;margin:auto}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}h1{font-size:26px}h2{font-size:19px;color:var(--blue)}label{display:block;color:var(--muted);font-size:13px;margin-top:9px}input,textarea{width:100%;padding:11px;margin-top:5px;border-radius:9px;border:1px solid #505866;background:#272c33;color:var(--text);font-size:16px}button{border:0;border-radius:9px;padding:11px 13px;font-weight:800;background:#0d6efd;color:#fff;margin-top:9px}.green{background:var(--green);color:#031407}.row{display:flex;gap:8px}.row>*{flex:1}.notice{background:#302806;border:1px solid #796516;color:#ffe394;padding:10px;border-radius:10px;font-size:13px;line-height:1.5}.ok{background:#11361f;border:1px solid #276c3d;color:#9af0b5;padding:10px;border-radius:10px;font-size:13px;line-height:1.5}.error{background:#351113;border:1px solid #7d282b;color:#ffb9bd;padding:10px;border-radius:10px;font-size:13px;line-height:1.5}.muted{color:var(--muted);font-size:13px;line-height:1.5}.hidden{display:none}@media(max-width:540px){.row{flex-direction:column}}
+</style>
+</head>
+<body><main>
+<h1>KP野帳 β 路線パッケージ作成</h1>
+<div class="notice">このページは販売者側のセットアップ工具です。KMLと既知KP JSONはブラウザ内で処理し、外部へ自動送信しません。利用権を確認できない路線データではパッケージを書き出さないでください。</div>
+
+<div class="card">
+<h2>1. 顧客・路線</h2>
+<div class="row"><div><label>packageId</label><input id="packageId" placeholder="例 client-a-r230-001"></div><div><label>routeId</label><input id="routeId" placeholder="例 R230-SOUTH"></div></div>
+<div class="row"><div><label>表示路線名</label><input id="label" placeholder="例 国道230号 担当区間"></div><div><label>短縮名</label><input id="shortName" placeholder="例 R230"></div></div>
+<label>現場KP採取時の route 名（必要な場合）</label><input id="captureRoute" placeholder="例 R230">
+</div>
+
+<div class="card">
+<h2>2. データ</h2>
+<label>KML</label><input id="kmlFile" type="file" accept=".kml,application/vnd.google-earth.kml+xml,text/xml">
+<label>既知KP JSON（kp-calibration-capture.html のJSON書き出し）</label><input id="captureFile" type="file" accept=".json,application/json">
+<div class="muted">各KML sectionに異なるKPアンカーが2点以上必要です。</div>
+</div>
+
+<div class="card">
+<h2>3. 権利・確認状態</h2>
+<label><input id="rightsConfirmed" type="checkbox" style="width:auto"> この路線データをこの顧客向けβで利用できる権利・条件を確認した</label>
+<label>確認根拠</label><input id="rightsBasis" placeholder="例 顧客保有KML。顧客から当該班での利用許可を確認">
+<label>補足</label><textarea id="rightsNote" placeholder="許諾範囲、出典、確認日など"></textarea>
+<label><input id="fieldVerified" type="checkbox" style="width:auto"> 既知KP地点で実地照合済み</label>
+</div>
+
+<div class="card">
+<h2>4. 作成</h2>
+<button class="green" onclick="buildPackage()">路線パッケージを検証して作成</button>
+<button id="downloadBtn" class="hidden" onclick="downloadPackage()">JSONを書き出す</button>
+<div id="result" class="muted" style="margin-top:10px">未作成</div>
+<textarea id="preview" class="hidden" readonly></textarea>
+</div>
+
+<script src="./route-engine.js"></script>
+<script src="./kml-route-loader.js"></script>
+<script src="./beta-app-core.js"></script>
+<script src="./beta-route-package-builder-core.js"></script>
+<script>
+'use strict';
+const Builder=window.KPBetaRoutePackageBuilder;
+let builtPackage=null;
+const el=id=>document.getElementById(id);
+const val=id=>el(id).value.trim();
+async function readTextFile(id){const f=el(id).files&&el(id).files[0];if(!f)throw new Error(id==='kmlFile'?'KMLを選択してください':'既知KP JSONを選択してください');return f.text()}
+async function buildPackage(){
+  builtPackage=null;el('downloadBtn').classList.add('hidden');el('preview').classList.add('hidden');
+  try{
+    const kml=await readTextFile('kmlFile');
+    const captureText=await readTextFile('captureFile');
+    const captureJson=JSON.parse(captureText);
+    builtPackage=Builder.buildRoutePackage(kml,captureJson,{
+      packageId:val('packageId'),routeId:val('routeId'),label:val('label'),shortName:val('shortName'),captureRoute:val('captureRoute'),
+      rightsConfirmed:el('rightsConfirmed').checked,rightsBasis:val('rightsBasis'),rightsNote:val('rightsNote'),fieldVerified:el('fieldVerified').checked,
+      sourceType:'customer-kml+known-kp',maxAnchorDistanceM:100
+    });
+    const audit=Builder.packageAudit(builtPackage);const r=audit.routes[0];
+    el('result').className='ok';
+    el('result').textContent=`作成OK：${audit.label} / section ${r.sectionCount} / anchors ${r.anchorCounts.join(',')} / KP ${r.kpMin}〜${r.kpMax} / 実地確認 ${audit.fieldVerified?'済':'未'}`;
+    el('preview').value=JSON.stringify(builtPackage,null,2);el('preview').classList.remove('hidden');el('downloadBtn').classList.remove('hidden');
+  }catch(e){el('result').className='error';el('result').textContent='作成停止：'+e.message}
+}
+function downloadPackage(){
+  if(!builtPackage)return;
+  const blob=new Blob([JSON.stringify(builtPackage,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`kp-yacho-route-${builtPackage.packageId}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+</script>
+</main></body>
+</html>
