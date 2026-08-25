@@ -1,0 +1,40 @@
+name: official-csv-inspect
+
+on:
+  push:
+    branches:
+      - feature/official-route-pilot
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Syntax check route engine
+        run: node --check route-engine.js
+      - name: Syntax check official route adapter
+        run: node --check official-route-adapter.js
+      - name: Syntax check route calibration
+        run: node --check route-calibration.js
+      - name: Syntax check measured comparison
+        run: node --check measured-network-legacy-compare.js
+      - name: Unit test route engine and applicability gate
+        run: node route-engine.test.js
+      - name: Unit test official route adapter
+        run: node official-route-adapter.test.js
+      - name: Unit test field KP calibration
+        run: node route-calibration.test.js
+      - name: Live audit official 100m route packages
+        run: node official-route-adapter.network.test.js
+      - name: Probe measured vs network dataset types
+        run: node official-reference-kind-probe.js
+      - name: Compare surveyed 1km KP with network and legacy scales
+        run: node measured-network-legacy-compare.js
+      - name: Decode official CSV identity fields
+        run: node official-csv-inspect.js
+      - name: Measure official 100m station alignment
+        run: node official-100m-station-alignment.js

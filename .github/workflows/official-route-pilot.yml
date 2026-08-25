@@ -1,0 +1,34 @@
+name: official-route-pilot
+
+on:
+  push:
+    branches:
+      - feature/official-route-pilot
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Probe official road reference point tiles
+        run: node official-route-probe.js
+      - name: Run Route 5 official-data KML pilot
+        run: node official-route-pilot.test.js
+      - name: Download National Land Numerical Information road centerline GeoJSON
+        shell: bash
+        run: |
+          set -euxo pipefail
+          URL="https://nlftp.mlit.go.jp/ksj/gml/data/N13/N13-24/N13-24_6440_GEOJSON.zip"
+          curl -fL --retry 2 "$URL" -o /tmp/n13.zip
+          unzip -p /tmp/n13.zip '*/N13-24_6440.geojson' > /tmp/n13.geojson
+          ls -lh /tmp/n13.zip /tmp/n13.geojson
+      - name: Build Route 5 centerline and measure KP interpolation
+        run: node national-road-centerline-pilot.js /tmp/n13.geojson
+      - name: Probe official 100m Route 5 range and CSV endpoints
+        run: node official-100m-endpoint-probe.js
+      - name: Compare official 100m data with current R230 R453 points
+        run: node official-100m-legacy-compare.js

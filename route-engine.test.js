@@ -23,4 +23,17 @@ const terminalDuplicate={id:'TERM',points:[{kp:45.5,lat:35,lon:135},{kp:45.6,lat
 assert.strictEqual(e.normalizeRoute(terminalDuplicate).sections.length,1);r=e.nearestOnRoute(35,135.001,terminalDuplicate);approx(r.kp,45.6,.0005,'terminal-duplicate');ok();
 const explicit={id:'SEC',sections:[{id:'a',polyline:[{lat:35,lon:135},{lat:35,lon:135.001}],anchors:[{kp:1,lat:35,lon:135},{kp:1.1,lat:35,lon:135.001}]},{id:'b',polyline:[{lat:35.01,lon:135},{lat:35.01,lon:135.001}],anchors:[{kp:9,lat:35.01,lon:135},{kp:9.1,lat:35.01,lon:135.001}]}]};
 r=e.nearestOnRoute(35.01,135.0005,explicit);assert.strictEqual(r.sectionId,'b');approx(r.kp,9.05,.002,'sections');ok();
+
+// Route applicability gate: nearest is not automatically usable.
+let a=e.assessRouteMatch({distM:20});assert.strictEqual(a.status,'ok');assert.strictEqual(a.accepted,true);ok();
+a=e.assessRouteMatch({distM:80});assert.strictEqual(a.status,'warning');assert.strictEqual(a.accepted,true);ok();
+a=e.assessRouteMatch({distM:230445});assert.strictEqual(a.status,'outside');assert.strictEqual(a.accepted,false);assert.strictEqual(a.outside,true);ok();
+a=e.assessRouteMatch(null);assert.strictEqual(a.status,'unavailable');assert.strictEqual(a.accepted,false);ok();
+assert.throws(()=>e.assessRouteMatch({distM:10},{warnDistanceM:300,maxDistanceM:200}),/invalid route distance thresholds/);ok();
+
+// Around 111m from CAL: still usable but warning. Around 333m: fail closed.
+a=e.findApplicableRoute(35.001,135.001,[calibrated],'auto');assert.strictEqual(a.status,'warning');assert.strictEqual(a.accepted,true);assert.strictEqual(a.result.routeId,'CAL');ok();
+a=e.findApplicableRoute(35.003,135.001,[calibrated],'auto');assert.strictEqual(a.status,'outside');assert.strictEqual(a.accepted,false);assert.ok(a.distM>300);assert.strictEqual(a.result.routeId,'CAL');ok();
+
+assert.strictEqual(e.DEFAULT_ROUTE_WARN_DISTANCE_M,30);assert.strictEqual(e.DEFAULT_ROUTE_MAX_DISTANCE_M,200);ok();
 console.log(`route-engine tests: ${count}/${count} passed`);
