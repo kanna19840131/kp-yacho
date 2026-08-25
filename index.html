@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KP野帳 v3.9.1</title>
+<title>KP野帳 v3.9.2</title>
 <style>
 :root{
   --bg:#070707; --card:#14161a; --text:#f5f5f5; --muted:#a8a8a8;
@@ -67,7 +67,7 @@ textarea{min-height:160px;font-size:14px}
 </head>
 <body>
 
-<h1>KP野帳 v3.9.1</h1>
+<h1>KP野帳 v3.9.2</h1>
 
 <div class="card">
   <h2>現在KP</h2>
@@ -93,8 +93,7 @@ textarea{min-height:160px;font-size:14px}
     <div><label>左右</label><select id="currentSide"><option>R</option><option>L</option><option>中央</option><option>-</option></select></div>
   </div>
   <button onclick="useCurrentKp()">このKPで記録</button>
-  <button class="btn-green" onclick="startWorkRecord()">施工前登録</button>
-  <div class="sub">KP確定後、施工前写真を撮ったら施工前登録。面積は後で編集入力。</div>
+  <div class="sub">KP確定後、「このKPで記録」で施工入力へ反映。面積入力後に行追加。</div>
 </div>
 
 <div class="card">
@@ -565,24 +564,6 @@ function nextNo(){
   const cur=parseFloat(val("no"));
   if(Number.isFinite(cur) && cur>max)max=cur-1;
   return String(Math.floor(max)+1);
-}
-
-function startWorkRecord(){
-  useCurrentKp();
-  const kp=val("kp");
-  if(!kp){alert("先にKPを確定してください。");return}
-  const record={
-    date:val("date"), route:val("route"), session:val("session"),
-    no:nextNo(), branch:"", kp:kp, side:val("side"),
-    shape:"manual", w:"", l1:"", l2:"", manualArea:"",
-    formula:"未計測", area:0, memo:"施工前登録",
-    photoBefore:true, photoAfter:false, started:true,
-    order:Date.now()+Math.random()
-  };
-  items.push(record);
-  document.getElementById("no").value=String((parseFloat(record.no)||0)+1);
-  render();
-  saveData(false);
 }
 
 function addItem(){
