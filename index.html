@@ -267,6 +267,10 @@ let latestGpsResult=null;
 // 30m超は注意、200m超は対象路線外として自動KPを止める。閾値は実地データで後から調整する。
 const ROUTE_WARN_DISTANCE_M=30;
 const ROUTE_MAX_DISTANCE_M=200;
+// GPS精度は路線までの距離とは別に判定する。
+// 20m超は注意、50m超または精度値を取得できない場合は自動KPを止める。
+const GPS_WARN_ACCURACY_M=20;
+const GPS_MAX_ACCURACY_M=50;
 
 function init(){
   document.getElementById("date").valueAsDate=new Date();
@@ -371,8 +375,31 @@ async function reverseGeocode(lat, lon, targetId){
 }
 function onGpsSuccess(pos){
   const lat=pos.coords.latitude, lon=pos.coords.longitude;
-  const acc=Math.round(pos.coords.accuracy||0);
+  const rawAcc=Number(pos.coords.accuracy);
+  const acc=Number.isFinite(rawAcc) && rawAcc>=0 ? Math.round(rawAcc) : null;
+  const accText=acc===null ? "取得不可" : acc+"m";
   window.latestLat=lat; window.latestLon=lon;
+
+  // GPS精度そのものが信頼できない時は、路線計算より先に自動KPを止める。
+  // 手動入力欄は一度クリアし、古い自動KPを誤って手動値として使わないようにする。
+  if(acc===null || acc>GPS_MAX_ACCURACY_M){
+    latestGpsResult=null;
+    document.getElementById("currentKp").innerText="GPS精度不足";
+    document.getElementById("currentKpInput").value="";
+    document.getElementById("gpsInfo").innerText="GPS精度 "+accText+" / "+new Date().toLocaleTimeString();
+    document.getElementById("nearestInfo").innerText="最寄りKP：精度不足のため停止";
+    document.getElementById("nearestAddr").innerText="最寄りKP住所：--";
+    document.getElementById("gpsWarn").style.display="block";
+    document.getElementById("gpsWarn").innerText=acc===null
+      ? "GPS精度を取得できないため、自動KPを停止しました。精度改善を待つか手動KPを入力してください。"
+      : "GPS精度不足：精度 "+acc+"m。自動KPを停止しました。精度改善を待つか手動KPを入力してください。";
+    const now=Date.now();
+    if(!window.lastReverseAt || now-window.lastReverseAt>30000){
+      window.lastReverseAt=now;
+      reverseGeocode(lat,lon,"currentAddr");
+    }
+    return;
+  }
 
   const mode=val("routeMode");
   let r230=nearestOnRoute(lat,lon,"国道230号");
@@ -396,7 +423,7 @@ function onGpsSuccess(pos){
       latestGpsResult=null;
       document.getElementById("currentKp").innerText="対象路線外";
       document.getElementById("currentKpInput").value="";
-      document.getElementById("gpsInfo").innerText="登録路線まで "+distM+"m / GPS精度 "+acc+"m / "+new Date().toLocaleTimeString();
+      document.getElementById("gpsInfo").innerText="登録路線まで "+distM+"m / GPS精度 "+accText+" / "+new Date().toLocaleTimeString();
       document.getElementById("nearestInfo").innerText="最寄り登録路線："+sroute+" / 約"+distM+"m";
       document.getElementById("nearestAddr").innerText="最寄りKP住所：--";
       document.getElementById("gpsWarn").style.display="block";
@@ -415,7 +442,7 @@ function onGpsSuccess(pos){
     document.getElementById("currentKp").innerText=kpText;
     document.getElementById("currentKpInput").value=formatKP(res.kp);
     document.getElementById("route").value=sroute;
-    document.getElementById("gpsInfo").innerText="路線まで "+distM+"m / GPS精度 "+acc+"m / "+new Date().toLocaleTimeString();
+    document.getElementById("gpsInfo").innerText="路線まで "+distM+"m / GPS精度 "+accText+" / "+new Date().toLocaleTimeString();
 
     document.getElementById("nearestInfo").innerText="最寄りKP："+kpText+" / 路線まで "+distM+"m";
     const kpAddr=res.addr || nearestPointAddress(res.route,res.kp);
@@ -428,16 +455,28 @@ function onGpsSuccess(pos){
       reverseGeocode(lat,lon,"currentAddr");
     }
 
+    const warnings=[];
     if(distM>ROUTE_WARN_DISTANCE_M){
+      warnings.push("路線まで "+distM+"m。路線外またはGPS誤差の可能性あり。");
+    }
+    if(acc>GPS_WARN_ACCURACY_M){
+      warnings.push("GPS精度 "+acc+"m。可能なら20m以内まで待ってください。");
+    }
+    if(warnings.length){
       document.getElementById("gpsWarn").style.display="block";
-      document.getElementById("gpsWarn").innerText="注意：路線まで "+distM+"m。路線外またはGPS誤差の可能性あり。";
+      document.getElementById("gpsWarn").innerText="注意："+warnings.join(" ");
     }else{
       document.getElementById("gpsWarn").style.display="none";
     }
   }else{
+    latestGpsResult=null;
     document.getElementById("currentKp").innerText="KP算出不可";
-    document.getElementById("gpsInfo").innerText="GPS精度 "+acc+"m / "+new Date().toLocaleTimeString();
+    document.getElementById("currentKpInput").value="";
+    document.getElementById("gpsInfo").innerText="GPS精度 "+accText+" / "+new Date().toLocaleTimeString();
     document.getElementById("nearestInfo").innerText="最寄りKP：算出不可";
+    document.getElementById("nearestAddr").innerText="最寄りKP住所：--";
+    document.getElementById("gpsWarn").style.display="block";
+    document.getElementById("gpsWarn").innerText="KP算出不可：登録路線データまたは現在位置を確認してください。";
     if(!window.lastReverseAt || Date.now()-window.lastReverseAt>30000){
       window.lastReverseAt=Date.now();
       reverseGeocode(lat,lon,"currentAddr");
