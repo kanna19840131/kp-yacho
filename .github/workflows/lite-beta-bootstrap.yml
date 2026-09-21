@@ -1,0 +1,93 @@
+name: Lite beta bootstrap
+
+on:
+  push:
+    branches:
+      - lite/grok-beta
+    paths:
+      - "lite/bootstrap/**"
+      - ".github/workflows/lite-beta-bootstrap.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout isolated beta branch
+        uses: actions/checkout@v4
+        with:
+          ref: lite/grok-beta
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Reconstruct verified source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat lite/bootstrap/source.b64.* > /tmp/source.b64
+          test "$(wc -c < /tmp/source.b64)" -eq 80452
+          echo "c57f03c8bf74c3d4646d51d9900e38fc181dc1533b70d35c10000cb2c2766d28  /tmp/source.b64" | sha256sum -c -
+          base64 -d /tmp/source.b64 > /tmp/source.zip
+          test "$(wc -c < /tmp/source.zip)" -eq 60338
+          echo "8812da4b42a43ecc71d6b6c21dad9535920885eb136927c93e345b0987ff624c  /tmp/source.zip" | sha256sum -c -
+          rm -rf lite/worktree
+          mkdir -p lite/worktree
+          unzip -q /tmp/source.zip -d lite/worktree
+
+      - name: Install dependencies
+        working-directory: lite/worktree
+        run: npm install --no-audit --no-fund
+
+      - name: Run logic tests
+        working-directory: lite/worktree
+        run: npm test
+
+      - name: Build production bundle
+        working-directory: lite/worktree
+        run: npm run build
+
+      - name: Guard production localStorage key
+        working-directory: lite/worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R --line-number -E 'localStorage\.(getItem|setItem|removeItem)\([^)]*kp_yacho_v12' src; then
+            echo "Direct production storage key I/O detected"
+            exit 1
+          fi
+
+      - name: Verify built entrypoint
+        working-directory: lite/worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          test -s dist/index.html
+          test -d dist/assets
+
+      - name: Package verification artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf lite/artifact
+          mkdir -p lite/artifact
+          cp -R lite/worktree/dist lite/artifact/dist
+          cp lite/worktree/package.json lite/artifact/package.json
+          cp lite/worktree/package-lock.json lite/artifact/package-lock.json
+          cp /tmp/source.zip lite/artifact/kp-yacho-lite-chatgpt-beta.zip
+          sha256sum lite/artifact/kp-yacho-lite-chatgpt-beta.zip > lite/artifact/SHA256SUMS
+
+      - name: Upload verified build
+        uses: actions/upload-artifact@v4
+        with:
+          name: kp-yacho-lite-grok-beta-build
+          path: lite/artifact
+          if-no-files-found: error
+          retention-days: 14
