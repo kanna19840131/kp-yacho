@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -91,3 +91,20 @@ jobs:
           path: lite/artifact
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish isolated static preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf lite/site
+          mkdir -p lite/site
+          cp -R lite/worktree/dist/. lite/site/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lite/site
+          if git diff --cached --quiet; then
+            echo "Static preview already current"
+            exit 0
+          fi
+          git commit -m "chore: publish Lite beta static preview [skip ci]"
+          git push origin HEAD:lite/grok-beta
